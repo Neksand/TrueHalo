@@ -88,13 +88,18 @@ fn ensure_main_window(app: &tauri::AppHandle) -> Option<WebviewWindow> {
 
     tracing::warn!("Main window is missing — recreating it");
 
-    WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+    let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
         .title("TrueHalo")
         .inner_size(1000.0, 720.0)
         .min_inner_size(640.0, 500.0)
-        .transparent(true)
+        .transparent(true);
+
+    #[cfg(target_os = "macos")]
+    let builder = builder
         .hidden_title(true)
-        .title_bar_style(tauri::TitleBarStyle::Overlay)
+        .title_bar_style(tauri::TitleBarStyle::Overlay);
+
+    builder
         .build()
         .map_err(|err| {
             tracing::error!("Could not recreate the main window: {}", err);

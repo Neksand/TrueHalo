@@ -170,7 +170,6 @@ pub fn set_screen_recording_protection(app: AppHandle, exclude: bool) -> Result<
                 }
             }
         }
-        return Ok(false);
     }
 
     #[cfg(target_os = "macos")]

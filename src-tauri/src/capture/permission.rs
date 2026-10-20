@@ -9,7 +9,9 @@
 //! showing anything, and `CGRequestScreenCaptureAccess` shows the system prompt.
 //! The prompt is only ever shown once per process, so we guard it.
 
-use anyhow::{Context, Result};
+#[cfg(target_os = "macos")]
+use anyhow::Context;
+use anyhow::Result;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 #[cfg(target_os = "macos")]
