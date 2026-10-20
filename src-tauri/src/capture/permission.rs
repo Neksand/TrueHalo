@@ -1,4 +1,4 @@
-//! Screen Recording permission helpers (macOS TCC).
+//! Screen Recording permission helpers (macOS TCC; Windows has no per-app gate).
 //!
 //! TrueHalo must *itself* ask macOS for screen capture access. When the system
 //! dialog is triggered through a spawned `/usr/sbin/screencapture` process the

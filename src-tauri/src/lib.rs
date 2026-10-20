@@ -198,7 +198,9 @@ pub fn run() {
                 // Make sure no stale material survives a previous run.
                 #[cfg(target_os = "macos")]
                 let _ = window_vibrancy::clear_vibrancy(&window);
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(windows)]
+                let _ = window_vibrancy::clear_acrylic(&window);
+                #[cfg(not(any(target_os = "macos", windows)))]
                 let _ = &window;
             }
 
@@ -481,27 +483,46 @@ fn restore_window_geometry(app: &tauri::AppHandle, db: &DatabaseManager) {
     }
 }
 
-/// Apply the macOS "hud window" vibrancy material behind the overlay.
-#[cfg(target_os = "macos")]
+/// Apply the native backdrop material behind the overlay.
 fn apply_vibrancy(window: &tauri::WebviewWindow) {
-    use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
+    #[cfg(target_os = "macos")]
+    {
+        use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial, NSVisualEffectState};
 
-    if let Err(err) = apply_vibrancy(
-        window,
-        NSVisualEffectMaterial::HudWindow,
-        Some(NSVisualEffectState::Active),
-        Some(16.0),
-    ) {
-        tracing::warn!("Could not apply macOS vibrancy: {}", err);
+        if let Err(err) = apply_vibrancy(
+            window,
+            NSVisualEffectMaterial::HudWindow,
+            Some(NSVisualEffectState::Active),
+            Some(16.0),
+        ) {
+            tracing::warn!("Could not apply macOS vibrancy: {}", err);
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        if let Err(err) = window_vibrancy::apply_acrylic(window, Some((18, 18, 18, 160))) {
+            tracing::warn!("Could not apply Windows acrylic: {}", err);
+        }
     }
 }
 
-/// Build the menu bar icon with the quick actions the overlay needs.
+/// Build the tray icon with the quick actions the overlay needs.
 fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    #[cfg(target_os = "macos")]
+    let (region_hint, screen_hint) = ("⌥⇧2", "⌥⇧3");
+    #[cfg(not(target_os = "macos"))]
+    let (region_hint, screen_hint) = ("Alt+Shift+2", "Alt+Shift+3");
+
     let toggle = MenuItemBuilder::with_id("toggle", "Show / Hide").build(app)?;
-    let region = MenuItemBuilder::with_id("capture_region", "Capture Region  ⌥⇧2").build(app)?;
-    let fullscreen =
-        MenuItemBuilder::with_id("capture_fullscreen", "Capture Screen  ⌥⇧3").build(app)?;
+    let region =
+        MenuItemBuilder::with_id("capture_region", format!("Capture Region  {}", region_hint))
+            .build(app)?;
+    let fullscreen = MenuItemBuilder::with_id(
+        "capture_fullscreen",
+        format!("Capture Screen  {}", screen_hint),
+    )
+    .build(app)?;
     let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit TrueHalo").build(app)?;
 

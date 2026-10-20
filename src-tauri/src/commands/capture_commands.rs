@@ -11,7 +11,7 @@ pub struct ScreenCaptureStatus {
     pub prompt_shown: bool,
     /// True when the user has to grant access and/or restart the app.
     pub needs_user_action: bool,
-    /// Platform supports the permission flow (always true on macOS).
+    /// Platform supports the permission flow (TCC on macOS; always granted on Windows).
     pub supported: bool,
 }
 
@@ -22,7 +22,7 @@ fn current_status() -> ScreenCaptureStatus {
         granted,
         prompt_shown,
         needs_user_action: !granted,
-        supported: cfg!(target_os = "macos"),
+        supported: cfg!(any(target_os = "macos", windows)),
     }
 }
 
@@ -32,7 +32,7 @@ pub fn screen_capture_status() -> ScreenCaptureStatus {
     current_status()
 }
 
-/// Ask macOS for Screen Recording access.
+/// Ask the OS for Screen Recording access (macOS TCC; no-op when already granted).
 ///
 /// `CGRequestScreenCaptureAccess` only presents its dialog once per process, so
 /// repeated clicks just re-report the current status instead of spamming.

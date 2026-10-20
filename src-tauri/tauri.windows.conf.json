@@ -1,0 +1,22 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "TrueHalo",
+        "label": "main",
+        "width": 1000,
+        "height": 720,
+        "minWidth": 640,
+        "minHeight": 500,
+        "resizable": true,
+        "fullscreen": false,
+        "transparent": true,
+        "shadow": true,
+        "decorations": false
+      }
+    ]
+  },
+  "bundle": {
+    "targets": ["nsis"]
+  }
+}

@@ -48,9 +48,34 @@ pub fn set_always_on_top(app: AppHandle, always_on_top: bool) -> Result<(), Stri
     }
 }
 
-/// Toggle the native macOS backdrop blur (vibrancy) behind the translucent UI.
+/// Toggle the native backdrop blur (vibrancy / acrylic) behind the translucent UI.
 #[command]
 pub fn set_vibrancy(app: AppHandle, enabled: bool) -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        use window_vibrancy::{apply_acrylic, clear_acrylic};
+
+        if let Some(window) = app.get_webview_window("main") {
+            let result: Result<(), window_vibrancy::Error> = if enabled {
+                // Dark acrylic tint that matches the overlay theme.
+                apply_acrylic(&window, Some((18, 18, 18, 160)))
+            } else {
+                clear_acrylic(&window)
+            };
+
+            match result {
+                Ok(()) => {
+                    tracing::info!("Windows window acrylic set to: {}", enabled);
+                    return Ok(true);
+                }
+                Err(err) => {
+                    tracing::warn!("Could not update Windows acrylic: {}", err);
+                    return Ok(false);
+                }
+            }
+        }
+    }
+
     #[cfg(target_os = "macos")]
     {
         use window_vibrancy::{
@@ -115,6 +140,39 @@ pub fn set_hide_from_dock(app: AppHandle, hide: bool) -> Result<bool, String> {
 
 #[command]
 pub fn set_screen_recording_protection(app: AppHandle, exclude: bool) -> Result<bool, String> {
+    #[cfg(windows)]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        use std::ffi::c_void;
+
+        // WDA_NONE = 0x00000000, WDA_EXCLUDEFROMCAPTURE = 0x00000011 (Windows 10 2004+).
+        const WDA_NONE: u32 = 0x0000_0000;
+        const WDA_EXCLUDEFROMCAPTURE: u32 = 0x0000_0011;
+
+        #[link(name = "user32")]
+        extern "system" {
+            fn SetWindowDisplayAffinity(hwnd: *mut c_void, affinity: u32) -> i32;
+        }
+
+        if let Some(window) = app.get_webview_window("main") {
+            if let Ok(handle) = window.window_handle() {
+                if let RawWindowHandle::Win32(win32) = handle.as_raw() {
+                    let affinity = if exclude {
+                        WDA_EXCLUDEFROMCAPTURE
+                    } else {
+                        WDA_NONE
+                    };
+                    let ok = unsafe {
+                        SetWindowDisplayAffinity(win32.hwnd.get() as *mut c_void, affinity) != 0
+                    };
+                    tracing::info!("Windows SetWindowDisplayAffinity({}) -> {}", affinity, ok);
+                    return Ok(ok);
+                }
+            }
+        }
+        return Ok(false);
+    }
+
     #[cfg(target_os = "macos")]
     {
         if let Some(window) = app.get_webview_window("main") {

@@ -2,10 +2,16 @@ use anyhow::{Context, Result};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use image::{codecs::jpeg::JpegEncoder, ExtendedColorType, ImageFormat};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::process::Command;
 
 pub mod permission;
+
+#[cfg(target_os = "macos")]
+#[path = "macos.rs"]
+mod platform;
+
+#[cfg(windows)]
+#[path = "windows.rs"]
+mod platform;
 
 /// Options for a single screen capture request coming from the frontend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,7 +59,7 @@ pub enum CaptureResponse {
     },
     /// The user pressed Escape in the interactive selection overlay.
     Cancelled,
-    /// macOS Screen Recording permission is missing; the UI must guide the user.
+    /// Screen Recording permission is missing; the UI must guide the user.
     PermissionRequired,
 }
 
@@ -65,43 +71,10 @@ impl ScreenCaptureService {
             return Ok(CaptureResponse::PermissionRequired);
         }
 
-        let temp_dir = std::env::temp_dir();
-        let unique_filename = format!("truehalo_cap_{}.png", uuid::Uuid::new_v4());
-        let temp_path: PathBuf = temp_dir.join(unique_filename);
+        let temp_path =
+            std::env::temp_dir().join(format!("truehalo_cap_{}.png", uuid::Uuid::new_v4()));
 
-        let mut cmd = Command::new("/usr/sbin/screencapture");
-        // -x: do not play the shutter sound
-        cmd.arg("-x");
-        cmd.arg("-t").arg("png");
-
-        if options.interactive {
-            // -i: interactive marquee region or window selection
-            cmd.arg("-i");
-        } else {
-            // -m: main monitor, -C: include the cursor
-            cmd.arg("-m");
-            if options.show_cursor {
-                cmd.arg("-C");
-            }
-        }
-
-        cmd.arg(&temp_path);
-
-        tracing::info!(
-            "screencapture: starting (interactive={})",
-            options.interactive
-        );
-        let status = cmd
-            .status()
-            .context("Failed to execute /usr/sbin/screencapture")?;
-        tracing::info!(
-            "screencapture: exited with {:?}, file exists={}",
-            status.code(),
-            temp_path.exists()
-        );
-
-        // Escape during interactive selection either leaves no file or an empty one.
-        if !temp_path.exists() {
+        if !platform::grab(&options, &temp_path)? {
             return Ok(CaptureResponse::Cancelled);
         }
 
