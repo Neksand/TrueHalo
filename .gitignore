@@ -1,0 +1,27 @@
+# Node
+node_modules
+dist
+dist-ssr
+*.local
+
+# Tauri / Rust
+src-tauri/target
+src-tauri/gen
+
+# Installers and packaged builds
+*.dmg
+*.msi
+*.nsis.exe
+*.app
+
+# macOS
+.DS_Store
+*.dSYM
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/src/assets/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrueHalo</title>
+    <style>
+      /* Paint the very first frame with the persisted opacity to avoid a flash. */
+      :root {
+        --window-opacity: 0.92;
+      }
+      html,
+      body,
+      #root {
+        background: transparent !important;
+      }
+    </style>
+  </head>
+  <body class="text-slate-100 overflow-hidden antialiased">
+    <div id="root" class="h-screen w-screen flex flex-col"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

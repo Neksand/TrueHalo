@@ -1,0 +1,48 @@
+{
+  "name": "truehalo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Native, privacy-first AI screen overlay for macOS. A lightweight alternative to Cheating Daddy.",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Neksand/TrueHalo.git"
+  },
+  "homepage": "https://github.com/Neksand/TrueHalo#readme",
+  "bugs": {
+    "url": "https://github.com/Neksand/TrueHalo/issues"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "sign:setup": "bash scripts/setup-signing.sh",
+    "app:build": "bash scripts/build.sh",
+    "app:install": "bash scripts/build.sh --install"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-global-shortcut": "^2.2.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "tailwind-merge": "^2.5.4"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0",
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

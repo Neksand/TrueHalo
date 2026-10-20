@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #0d0e12;
+    --bg-secondary: #15171e;
+    --bg-tertiary: #1c1f2a;
+    --border-color: #282c37;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --halo-glow: rgba(255, 107, 74, 0.2);
+    /* Window backdrop opacity, updated from React and persisted in SQLite. */
+    --window-opacity: 0.92;
+  }
+
+  .light {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --border-color: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --halo-glow: rgba(255, 107, 74, 0.15);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    /* The window is transparent: every layer above it must stay see-through. */
+    background: transparent;
+  }
+
+  body {
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  }
+}
+
+@layer components {
+  /*
+   * Single translucent backdrop for the whole overlay. Sitting behind every
+   * other surface it lets the desktop (or the native vibrancy material, when
+   * enabled) show through. Alpha maps 1:1 to the opacity slider, so 100% is
+   * genuinely solid and 5% is nearly invisible.
+   */
+  .app-backdrop {
+    background-color: rgba(13, 14, 18, var(--window-opacity));
+    /* Subtle halo accent gradient keeps the "TrueHalo" feel at low opacity. */
+    background-image: radial-gradient(
+      120% 90% at 85% -10%,
+      rgba(255, 107, 74, calc(var(--window-opacity) * 0.18)) 0%,
+      transparent 62%
+    );
+  }
+
+  /* Native drag region helper (Tauri handles the actual dragging). */
+  [data-tauri-drag-region] {
+    cursor: default;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Window drag regions are handled by Tauri via data-tauri-drag-region.
+ * Interactive controls deliberately stay clickable. */
+button,
+input,
+textarea,
+select,
+[role="button"],
+a,
+kbd {
+  -webkit-app-region: no-drag;
+}
+
+/* Text inside messages stays selectable for copy/paste. */
+.selectable,
+.selectable * {
+  user-select: text;
+  -webkit-user-select: text;
+}
