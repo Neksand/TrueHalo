@@ -7,7 +7,6 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 ### Planned
-- Windows build (Credential Manager + Win32 capture backend)
 - Universal binary (Apple Silicon + Intel)
 - Assistant profiles (interview, meeting, sales)
 - Optional click-through mode
@@ -17,19 +16,21 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 First public release.
 
 ### Added
-- Native macOS overlay built with Tauri 2, Rust and React.
+- Native overlay built with Tauri 2, Rust and React on macOS and Windows.
 - Three AI providers: OpenRouter, Google Gemini and OpenAI, with a live model catalog.
 - Streaming responses with cancellation through `Esc` or the Stop button.
 - Multimodal requests: region (`⌥⇧2`) and full-screen (`⌥⇧3`) screenshots.
 - Screenshot compression presets (Quality / Balanced / Speed) with token-saving history trimming.
-- macOS Keychain storage for API keys, with an attributes-only existence check and a one-click
-  ACL repair action.
+- System credential storage for API keys (macOS Keychain, Windows Credential Manager), with an
+  attributes-only existence check and a one-click ACL repair action.
 - True transparency with an opacity slider and optional AppKit vibrancy.
 - `NSWindowSharingNone` protection: the overlay is excluded from other apps' recordings.
 - Accessory mode (hidden from the Dock and `⌘Tab`) with a menu bar icon.
 - Window dragging, persisted position/size and global show/hide hotkey (`⌥Space`).
 - Local SQLite history and preferences.
 - Stable local code signing, so the Screen Recording permission survives rebuilds.
+- Windows backend: Credential Manager storage, PowerShell/WinForms screen capture, DWM acrylic,
+  `WDA_EXCLUDEFROMCAPTURE` recording protection and an NSIS installer.
 
 ### Changed
 - Platform-neutral UI copy: the interface no longer hardcodes macOS-specific wording,

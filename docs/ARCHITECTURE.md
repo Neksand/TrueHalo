@@ -1,6 +1,6 @@
 # TrueHalo Architecture Document
 
-TrueHalo is a fast, responsive macOS AI companion and screen overlay desktop application. It integrates multiple LLM providers (OpenRouter, Google Gemini, OpenAI), native macOS Keychain storage, and on-demand screen capture.
+TrueHalo is a fast, responsive AI companion and screen overlay for macOS and Windows. It integrates multiple LLM providers (OpenRouter, Google Gemini, OpenAI), system credential storage and on-demand screen capture. Platform-specific code is quarantined behind small modules, so the frontend and the streaming core are shared.
 
 ---
 
@@ -14,12 +14,12 @@ TrueHalo/
 │   │   └── markdown/                     # MarkdownRenderer (safe GFM & code blocks)
 │   ├── features/
 │   │   ├── chat/                         # ChatView, message bubbles, streaming cursor
-│   │   ├── providers/                    # ProviderSettingsModal, Keychain key management
+│   │   ├── providers/                    # ProviderSettingsModal, credential management
 │   │   └── capture/                      # Screen capture interface (multimodal attachments)
 │   ├── lib/
 │   │   ├── types.ts                      # Common types (ChatMessage, ModelInfo, ProviderId)
 │   │   └── tauri.ts                      # Typed Tauri IPC bridge
-│   ├── styles/                           # Tailwind CSS tokens & macOS vibrancy rules
+│   ├── styles/                           # Tailwind CSS tokens & window-effect rules
 │   ├── App.tsx                           # Root orchestrator
 │   └── main.tsx                          # DOM mount
 ├── src-tauri/                            # Rust & Tauri 2 Native Backend
@@ -34,18 +34,22 @@ TrueHalo/
 │   │   │   ├── gemini.rs                 # Google Gemini API client
 │   │   │   └── openai.rs                 # OpenAI API client
 │   │   ├── auth/
-│   │   │   └── keychain.rs               # Apple Security.framework native Keychain integration
+│   │   │   ├── keychain.rs               # macOS: Security.framework Keychain
+│   │   │   └── windows_store.rs          # Windows: Credential Manager (keyring)
 │   │   ├── capture/
-│   │   │   ├── mod.rs                    # screencapture + downscale/JPEG compression
-│   │   │   └── permission.rs             # CoreGraphics TCC preflight/request FFI
+│   │   │   ├── mod.rs                    # capture orchestration + downscale/JPEG compression
+│   │   │   ├── macos.rs                  # macOS: /usr/sbin/screencapture
+│   │   │   ├── windows.rs                # Windows: PowerShell + WinForms capture
+│   │   │   └── permission.rs             # macOS TCC preflight/request FFI
 │   │   └── commands/                     # Tauri typed commands
 │   │       ├── ai_commands.rs            # list_models, start_stream, cancel_stream
 │   │       ├── auth_commands.rs          # save_api_key, delete_api_key, has_api_key
 │   │       ├── capture_commands.rs       # capture_screen, screen permission flow
 │   │       └── window_commands.rs        # overlay visibility, vibrancy, stealth mode
-│   ├── icons/                            # macOS icon assets (icns, png 32..512)
+│   ├── icons/                            # Icon assets (icns, ico, png 32..512)
 │   ├── Cargo.toml                        # Rust dependencies
-│   └── tauri.conf.json                   # Tauri 2 configuration
+│   ├── tauri.conf.json                   # Tauri 2 configuration
+│   └── tauri.windows.conf.json           # Windows overrides (undecorated window, NSIS)
 ├── scripts/
 │   ├── setup-signing.sh                  # creates the stable local signing identity
 │   └── build.sh                          # build + sign + verify + (optional) install
@@ -120,5 +124,5 @@ Every streaming completion assigns a unique `stream_id` (UUIDv4).
 - macOS binds a keychain item's ACL to the exact code signature that created it. Updating an existing item keeps the old ACL, which is why an older build kept triggering the login-password dialog.
 - `save_credential` therefore **deletes and re-creates** the item, binding it to the current stable certificate.
 - `has_credential` queries **attributes only** (`kSecReturnAttributes`, no `kSecReturnData`), which never touches the protected secret and never raises a prompt — so opening Settings or launching the app is silent.
-- Settings → Privacy → *macOS password when accessing keys* runs `repair_keychain_access`, which reads each existing key once (one system dialog) and rewrites it with the current signature.
+- Settings → Privacy → *Password prompt when accessing keys* runs `repair_keychain_access`, which reads each existing key once (one system dialog) and rewrites it with the current signature.
 

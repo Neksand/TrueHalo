@@ -41,11 +41,12 @@ and stays out of other apps' recordings.
 | Platform | Status | Installer |
 |---|---|---|
 | macOS 13+ (Apple Silicon) | ✅ Available | `TrueHalo-0.1.0-arm64.dmg` |
-| Windows 10 / 11 (x64) | 🚧 Port in progress | `.exe` / `.msi` will be built by CI |
+| Windows 10 2004+ / 11 (x64) | ✅ Available | `TrueHalo_0.1.0_x64-setup.exe` (NSIS) |
 
 The UI and the Rust core are platform-neutral. The macOS backend uses AppKit and the
-Keychain; the Windows backend uses Win32 capture and the Credential Manager. Both are
-served by the same React frontend — nothing in the app is tied to a single platform.
+Keychain; the Windows backend uses Win32 (acrylic, display affinity) and the Credential
+Manager. Both are served by the same React frontend — nothing in the app is tied to a
+single platform.
 
 ## TrueHalo vs Cheating Daddy
 
@@ -63,7 +64,7 @@ the same idea with a much smaller footprint, provider freedom and stricter priva
 | Assistant profiles | 5 presets (interview, sales, meeting, …) | Free-form chat (profiles on the roadmap) |
 | Overlay privacy | Transparent, click-through | Hidden from other apps' screen recordings, accessory mode |
 | API key storage | — | System credential store, never sent to the webview |
-| Platforms | macOS · Windows · Linux | macOS · Windows (port in progress) |
+| Platforms | macOS · Windows · Linux | macOS · Windows |
 | License | GPL-3.0 | GPL-3.0 |
 
 ## Features
@@ -120,9 +121,16 @@ Intel Macs can build from source).
 
 ### Windows
 
-The Windows port is in progress. Until it ships, there is no installer to download:
-the capture backend, credential storage and bundle targets are being ported, after which
-CI will publish `.exe` / `.msi` files in the same release.
+Requirements: Windows 10 version 2004 or newer (x64). The installer fetches WebView2
+automatically if it is missing.
+
+1. Grab the latest `TrueHalo_*-x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+2. Run it. The build is not signed with a commercial certificate, so SmartScreen may warn:
+   click **More info** → **Run anyway**.
+3. Launch TrueHalo from the Start menu or the tray icon.
+
+Region capture opens a dimmed selection overlay — drag a rectangle, or press `Esc` to cancel.
+Windows has no per-app screen-recording permission, so there is nothing to approve.
 
 ### First run
 
@@ -150,6 +158,13 @@ npm run app:build -- --release --dmg --install
 ```
 
 Prerequisites: Xcode Command Line Tools (`xcode-select --install`), Node.js 18+, Rust stable.
+
+On Windows, install the Rust MSVC toolchain and Visual Studio Build Tools, then:
+
+```powershell
+npm install
+npm run tauri build -- --bundles nsis
+```
 
 > `npm run tauri dev` runs an unsigned debug binary, so the system cannot persist the
 > screen-recording permission for it. Use the signed `/Applications` build when testing screenshots.
@@ -185,7 +200,7 @@ More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [SECURITY.md](SECUR
 
 ## Privacy & security
 
-- **Keys**: system credential store (macOS Keychain today, Windows Credential Manager in the port).
+- **Keys**: system credential store — macOS Keychain on macOS, Windows Credential Manager on Windows.
   Existence checks read attributes only, so Settings never asks for your login password.
   A one-click **Fix** in Settings → Screen Recording & Privacy re-binds keys created by older builds.
 - **Network**: direct HTTPS to the provider you chose. Nothing else. No telemetry.
@@ -204,13 +219,16 @@ Full threat model: [SECURITY.md](SECURITY.md).
 | A password prompt appears when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
 | Hotkeys do nothing | Another app owns the shortcut; quit it or change the global shortcut |
 | Model list is empty | The provider rejected the key (401/429) — check the key and your quota |
+| Windows: “Windows protected your PC” | SmartScreen → **More info** → **Run anyway** (no commercial certificate) |
+| Windows: a protected video captures as black | DRM windows cannot be captured by any screen recorder |
 
 Logs: `~/Library/Logs/TrueHalo/truehalo.log` (macOS).
 
 ## Roadmap
 
-- [ ] Windows build (Credential Manager + Win32 capture backend)
+- [x] Windows build (Credential Manager + capture backend + NSIS installer)
 - [ ] Universal macOS binary (Apple Silicon + Intel)
+- [ ] Code signing for both platforms (Apple Developer ID, Authenticode)
 - [ ] Assistant profiles (interview, meeting, sales)
 - [ ] Optional click-through mode
 - [ ] Local models via Ollama
@@ -222,9 +240,9 @@ Logs: `~/Library/Logs/TrueHalo/truehalo.log` (macOS).
 | Shell | Tauri 2 |
 | Backend | Rust, Tokio, reqwest, rusqlite |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS |
-| Capture | macOS `screencapture` · Windows backend in progress |
-| Credentials | macOS Keychain · Windows Credential Manager (in progress) |
-| Window | AppKit on macOS · Win32 on Windows (in progress) |
+| Capture | macOS `screencapture` · Windows PowerShell + WinForms |
+| Credentials | macOS Keychain · Windows Credential Manager |
+| Window | AppKit on macOS · Win32 / DWM on Windows |
 
 ```
 src/                  React UI (chat, providers, capture, settings)
