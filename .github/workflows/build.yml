@@ -14,9 +14,9 @@ jobs:
     name: macOS (arm64)
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -45,7 +45,7 @@ jobs:
         run: npm run tauri build -- --bundles app,dmg
 
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: TrueHalo-macos-arm64
           path: src-tauri/target/release/bundle/dmg/*.dmg
