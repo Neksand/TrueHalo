@@ -137,24 +137,24 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       await tauriApi.saveApiKey(selectedProvider, apiKeyInput.trim());
       setApiKeyInput("");
       setHasKey(true);
-      setMessage({ type: "success", text: "Key saved to the macOS Keychain." });
+      setMessage({ type: "success", text: "Key saved to the system keychain." });
       await fetchModels(selectedProvider);
     } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Could not save the key to the Keychain" });
+      setMessage({ type: "error", text: err.message || "Could not save the key to the keychain" });
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteKey = async () => {
-    if (!confirm(`Delete the ${selectedProvider} key from the macOS Keychain?`)) {
+    if (!confirm(`Delete the ${selectedProvider} key from the keychain?`)) {
       return;
     }
     try {
       await tauriApi.deleteApiKey(selectedProvider);
       setHasKey(false);
       setModels([]);
-      setMessage({ type: "success", text: "Key removed from the Keychain" });
+      setMessage({ type: "success", text: "Key removed from the keychain" });
     } catch (err: any) {
       setMessage({ type: "error", text: "Could not delete the key" });
     }
@@ -282,7 +282,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                     </button>
                   </div>
                   <p className="text-slate-400 text-[11px] leading-relaxed">
-                    Click “Sign in to OpenAI” to authorise in your browser with your ChatGPT account (Google/Apple/Email). On the keys page that opens, click <b>Create new secret key</b> and paste it below. The key is stored in the Keychain permanently.
+                    Click “Sign in to OpenAI” to authorise in your browser with your ChatGPT account (Google/Apple/Email). On the keys page that opens, click <b>Create new secret key</b> and paste it below. The key is stored in the system keychain permanently.
                   </p>
                 </div>
               )}
@@ -297,7 +297,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   )}
                   <div className="text-xs">
                     <span className="font-medium text-slate-200">
-                      {hasKey ? "Key connected in the macOS Keychain" : "API key not configured"}
+                      {hasKey ? "Key connected in the system keychain" : "API key not configured"}
                     </span>
                     <p className="text-slate-400 text-[11px] mt-0.5">
                       Get a key in the{" "}
@@ -329,7 +329,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   <span>{hasKey ? "Update API key" : "Enter API key"}</span>
                   <span className="flex items-center gap-1 text-[11px] text-slate-400">
                     <Shield className="w-3 h-3 text-emerald-400" />
-                    macOS Security.framework
+                    System credential store
                   </span>
                 </label>
                 <div className="flex gap-2">
@@ -508,10 +508,10 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-semibold text-slate-100">
-                    macOS frosted glass (Vibrancy)
+                    Frosted glass (Vibrancy)
                   </span>
                   <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
-                    Native AppKit backdrop blur. Keeps text readable even when the
+                    Native backdrop blur. Keeps text readable even when the
                     window is highly transparent.
                   </p>
                 </div>
@@ -548,7 +548,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                     <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
                       {permissionStatus?.granted
                         ? "Permission granted. Screenshots work."
-                        : "Permission not granted — screenshots are unavailable until macOS allows screen recording."}
+                        : "Permission not granted — screenshots are unavailable until the system allows screen recording."}
                     </p>
                   </div>
                 </div>
@@ -580,11 +580,11 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   <Key className="w-4 h-4 text-halo-accent shrink-0 mt-0.5" />
                   <div>
                     <span className="text-xs font-semibold text-slate-100">
-                      macOS password when accessing keys
+                      Password prompt when accessing keys
                     </span>
                     <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
-                      If macOS asks for a password when you open Settings or send a
-                      request, the keys were saved by an old (unsigned) build.
+                      If the system asks for a password when you open Settings or send
+                      a request, the keys were saved by an old (unsigned) build.
                       Click the button once: the keys are re-bound to the current
                       signature and the prompts stop for good.
                     </p>
@@ -620,7 +620,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
               <p className="text-[10px] text-slate-500 leading-relaxed">
                 Tip: if the system dialog still appears, choose{" "}
                 <b className="text-slate-400">“Always Allow”</b> rather than just
-                “Allow” — that way macOS remembers the access.
+                “Allow” — that way the system remembers the access.
               </p>
             </div>
 
@@ -707,7 +707,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
             <div>
               <h3 className="text-sm font-semibold text-slate-100">Stealth mode</h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                TrueHalo stays available through the macOS menu bar icon.
+                TrueHalo stays available through the menu bar / tray icon.
               </p>
             </div>
 
@@ -715,11 +715,11 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-xs font-semibold text-slate-100">
-                    Hide from the Dock and ⌘Tab
+                    Hide from the Dock / taskbar and app switcher
                   </span>
                   <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
-                    The app is not shown in the Dock or the app switcher, but
-                    keeps running. Use the menu bar icon to control it.
+                    The app is not shown in the Dock / taskbar or the app switcher,
+                    but keeps running. Use the menu bar / tray icon to control it.
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
@@ -740,8 +740,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                     Hide the window from other screen recordings
                   </span>
                   <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
-                    The AppKit `NSWindowSharingNone` window property excludes the
-                    TrueHalo window from captures by other apps (OBS, Zoom, QuickTime).
+                    The TrueHalo window is excluded from captures by other apps
+                    (OBS, Zoom, QuickTime).
                   </p>
                 </div>
 
@@ -767,13 +767,13 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
             <div className="p-4 rounded-xl border border-amber-900/40 bg-amber-950/20 text-xs text-amber-200/80 space-y-1.5">
               <span className="font-semibold text-amber-300 flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 text-amber-400" />
-                macOS limitations:
+                Platform limitations:
               </span>
               <p className="text-[11px] leading-relaxed">
-                macOS binds the Screen Recording permission to the app's code
-                signature. TrueHalo is signed with a stable local certificate, so
-                the access survives rebuilds. If you updated the app manually,
-                macOS may ask for access again — that is system behaviour.
+                Screen Recording permission is bound to the app's code signature.
+                TrueHalo is signed with a stable certificate, so access survives
+                updates. If you replaced the app manually, the system may ask
+                again — that is normal behaviour.
               </p>
             </div>
 

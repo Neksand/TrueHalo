@@ -81,7 +81,7 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
               Screen Recording access
             </h2>
             <p className="text-xs text-slate-400">
-              macOS permission for TrueHalo screenshots
+              System permission for TrueHalo screenshots
             </p>
           </div>
         </div>
@@ -92,15 +92,15 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 Permission granted. If you rebuilt or reinstalled the app after
-                granting it, restart TrueHalo — macOS only applies the access
-                after a restart.
+                granting it, restart TrueHalo — the system only applies the
+                access after a restart.
               </span>
             </div>
           ) : (
             <div className="p-3 rounded-lg bg-amber-950/40 border border-amber-800/60 text-amber-200 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
-                macOS has not allowed TrueHalo to record the screen yet.
+                The system has not allowed TrueHalo to record the screen yet.
                 Screenshots are unavailable without it.
               </span>
             </div>
@@ -111,15 +111,14 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
               Click <b>“Open System Settings”</b> below.
             </li>
             <li>
-              The{" "}
-              <b>Privacy &amp; Security → Screen &amp; System Audio Recording</b>{" "}
-              pane opens.
+              Open the system privacy settings and select the screen
+              recording pane.
             </li>
             <li>
               Turn on the switch next to <b>TrueHalo</b>.
             </li>
             <li>
-              macOS will ask you to quit and reopen the app — or click{" "}
+              The system will ask you to quit and reopen the app — or click{" "}
               <b>“Restart TrueHalo”</b> in this window.
             </li>
           </ol>
@@ -137,8 +136,8 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
           {promptShown && !granted && (
             <div className="text-[11px] text-slate-500">
               The system dialog has already been shown once for this app run —
-              macOS will not show it again, so access must be granted manually in
-              Settings.
+              it will not be shown again, so access must be granted manually in
+              system settings.
             </div>
           )}
         </div>

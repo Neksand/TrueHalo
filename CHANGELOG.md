@@ -31,6 +31,10 @@ First public release.
 - Local SQLite history and preferences.
 - Stable local code signing, so the Screen Recording permission survives rebuilds.
 
+### Changed
+- Platform-neutral UI copy: the interface no longer hardcodes macOS-specific wording,
+  so the same strings fit the upcoming Windows build.
+
 ### Fixed
 - Capture from a worker thread no longer traps in AppKit (`Must only be used from the main thread`).
 - Hiding the overlay no longer terminates the process: the app is hidden with `NSApp hide:`

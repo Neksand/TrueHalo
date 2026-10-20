@@ -1,7 +1,7 @@
 [package]
 name = "truehalo"
 version = "0.1.0"
-description = "Native, privacy-first AI screen overlay for macOS"
+description = "Native, privacy-first AI screen overlay for desktop"
 authors = ["TrueHalo contributors"]
 edition = "2021"
 license = "GPL-3.0-only"

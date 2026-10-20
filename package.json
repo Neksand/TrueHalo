@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Native, privacy-first AI screen overlay for macOS. A lightweight alternative to Cheating Daddy.",
+  "description": "Native, privacy-first AI screen overlay for desktop. A lightweight alternative to Cheating Daddy.",
   "license": "GPL-3.0-only",
   "repository": {
     "type": "git",

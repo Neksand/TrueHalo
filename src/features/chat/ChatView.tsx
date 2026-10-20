@@ -691,7 +691,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 />
               </div>
               <h2 className="text-lg font-semibold text-slate-100 mb-1">
-                TrueHalo macOS AI Overlay
+                TrueHalo AI Overlay
               </h2>
               <p className="text-xs text-slate-400 leading-relaxed mb-6">
                 Fast AI overlay companion. Press <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">⌥ Space</kbd> to toggle, or capture screens with <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">⌥⇧2</kbd>.
@@ -818,7 +818,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
               <span>
-                macOS has not allowed TrueHalo to record the screen — screenshots are unavailable.
+                Screen recording access is not granted — screenshots are unavailable.
               </span>
             </div>
             <button

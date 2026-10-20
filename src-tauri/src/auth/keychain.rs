@@ -16,9 +16,9 @@ pub enum KeychainError {
 impl fmt::Display for KeychainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            KeychainError::SecError(e) => write!(f, "macOS Keychain error: {}", e),
+            KeychainError::SecError(e) => write!(f, "Keychain error: {}", e),
             KeychainError::Utf8Error(e) => write!(f, "Invalid UTF-8 in keychain payload: {}", e),
-            KeychainError::NotFound => write!(f, "Credential not found in macOS Keychain"),
+            KeychainError::NotFound => write!(f, "Credential not found in the keychain"),
         }
     }
 }

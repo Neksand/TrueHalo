@@ -8,7 +8,7 @@ TrueHalo is built strictly following the principle of least privilege, zero-know
 
 | Surface | Defense & Design Decision |
 |---|---|
-| **API Keys & Credentials** | Stored strictly in **macOS Keychain** using Apple's native `Security.framework` (`SecGenericPassword`). Keys are **never** persisted to plaintext config files, `.env`, SQLite databases, frontend `localStorage`/`sessionStorage`, or debug logs. |
+| **API Keys & Credentials** | Stored strictly in the **system credential store** — macOS Keychain (`Security.framework`, `SecGenericPassword`) today, Windows Credential Manager in the Windows port. Keys are **never** persisted to plaintext config files, `.env`, SQLite databases, frontend `localStorage`/`sessionStorage`, or debug logs. |
 | **Frontend IPC** | Tauri 2 IPC commands do not return secret keys to the webview. Commands only expose boolean status checks (`has_api_key`) and credential lifecycle triggers (`save_api_key`, `delete_api_key`). |
 | **Content Security Policy (CSP)** | Enforces strict CSP: restricts script execution to `'self'`, prevents inline script injections, disables unapproved external navigation. |
 | **Markdown / Model Outputs** | Markdown rendering sanitizes HTML tags. Model output text is rendered purely as text nodes and safe markdown components. No `dangerouslySetInnerHTML` is used. |
@@ -22,11 +22,11 @@ TrueHalo is built strictly following the principle of least privilege, zero-know
 
 ## 2. Stored Data
 
-- **macOS Keychain**:
+- **System credential store** (macOS Keychain; Windows Credential Manager in the port):
   - Service: `com.truehalo.desktop`
   - Accounts: `provider:openrouter`, `provider:gemini`, `provider:openai`
   - Protection: Protected by macOS user login and system access control.
-  - **Access control (ACL)**: macOS binds each item's ACL to the exact code signature. `save_credential` deletes and re-creates the item so it belongs to the current stable certificate, and `has_credential` asks only for item *attributes* (`kSecReturnAttributes`), never the secret — so status checks in Settings cannot raise the login-password dialog. Keys saved by older builds can be re-bound once through Settings → Privacy → "Fix".
+  - **Access control (ACL)**: the OS binds each item's ACL to the exact code signature. `save_credential` deletes and re-creates the item so it belongs to the current stable certificate, and `has_credential` asks only for item *attributes* (`kSecReturnAttributes`), never the secret — so status checks in Settings cannot raise the login-password dialog. Keys saved by older builds can be re-bound once through Settings → Privacy → "Fix".
 - **Application Preferences & History**:
   - Active provider / model choices.
   - Window opacity, vibrancy, stealth and screenshot compression settings.

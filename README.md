@@ -4,10 +4,10 @@
 
 # TrueHalo
 
-**A native, privacy-first AI screen overlay for macOS.**<br/>
+**A native, privacy-first AI screen overlay for desktop.**<br/>
 A lightweight, specialized alternative to [Cheating Daddy](https://github.com/sohzm/cheating-daddy).
 
-[![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-black?logo=apple)](https://github.com/Neksand/TrueHalo)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-black)](#platform-support)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](https://www.rust-lang.org)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
@@ -26,15 +26,26 @@ A lightweight, specialized alternative to [Cheating Daddy](https://github.com/so
 
 Most AI overlay apps are Electron bundles that record your screen and your microphone
 continuously. TrueHalo takes the opposite approach: a small native app that looks at
-your screen **only when you ask it to**, keeps your API keys in the macOS Keychain,
+your screen **only when you ask it to**, keeps your API keys in the system keychain,
 and stays out of other apps' recordings.
 
-- **Native, not Electron.** Rust + Tauri 2 + the system WebView. ~19 MB app, 8 MB DMG.
+- **Native, not Electron.** Rust + Tauri 2 + the system WebView. ~19 MB app, 8 MB installer.
 - **Bring your own model.** OpenRouter, Google Gemini and OpenAI — any vision-capable model.
 - **On-demand only.** No background analysis, no recording, no timers. One hotkey, one screenshot.
-- **Keys stay on your Mac.** Stored in the macOS Keychain and never exposed to the webview.
+- **Keys stay on your machine.** Stored in the system credential store and never exposed to the webview.
 - **Made for the overlay use case.** Excluded from other screen recordings, optional accessory
-  mode, remembers its position and size, toggle with `⌥Space`.
+  mode, remembers its position and size, toggle with a global hotkey.
+
+## Platform support
+
+| Platform | Status | Installer |
+|---|---|---|
+| macOS 13+ (Apple Silicon) | ✅ Available | `TrueHalo-0.1.0-arm64.dmg` |
+| Windows 10 / 11 (x64) | 🚧 Port in progress | `.exe` / `.msi` will be built by CI |
+
+The UI and the Rust core are platform-neutral. The macOS backend uses AppKit and the
+Keychain; the Windows backend uses Win32 capture and the Credential Manager. Both are
+served by the same React frontend — nothing in the app is tied to a single platform.
 
 ## TrueHalo vs Cheating Daddy
 
@@ -45,14 +56,14 @@ the same idea with a much smaller footprint, provider freedom and stricter priva
 | | Cheating Daddy | TrueHalo |
 |---|---|---|
 | Runtime | Electron | Tauri 2 (Rust + system WebView) |
-| Install size | Electron bundle | ~19 MB app · 8 MB DMG |
+| Install size | Electron bundle | ~19 MB app · 8 MB installer |
 | AI providers | Google Gemini Live | OpenRouter · Google Gemini · OpenAI |
-| Screen analysis | Real-time during a session | On demand: `⌥⇧2` region, `⌥⇧3` screen |
+| Screen analysis | Real-time during a session | On demand: region or full-screen hotkey |
 | Audio capture | Yes (system audio + microphone) | Not included — screen only, by design |
 | Assistant profiles | 5 presets (interview, sales, meeting, …) | Free-form chat (profiles on the roadmap) |
 | Overlay privacy | Transparent, click-through | Hidden from other apps' screen recordings, accessory mode |
-| API key storage | — | macOS Keychain, never sent to the webview |
-| Platforms | macOS · Windows · Linux | macOS (Windows on the roadmap) |
+| API key storage | — | System credential store, never sent to the webview |
+| Platforms | macOS · Windows · Linux | macOS · Windows (port in progress) |
 | License | GPL-3.0 | GPL-3.0 |
 
 ## Features
@@ -65,36 +76,35 @@ the same idea with a much smaller footprint, provider freedom and stricter priva
   older images are replaced with a placeholder to save tokens.
 
 ### Screenshots
-- **Two hotkeys**: `⌥⇧2` for a region, `⌥⇧3` for the full screen.
+- **Two hotkeys**: region capture and full-screen capture.
 - **Compressed before upload** — a raw Retina PNG (10–20 MB) usually becomes < 1 MB
   with the Balanced preset (Quality / Balanced / Speed).
 - **The overlay never appears in its own screenshot** — the window is hidden during capture.
-- **Stable Screen Recording permission** — builds are signed with a persistent local identity,
-  so macOS does not ask again after every rebuild.
+- **Stable screen-recording permission** — builds are signed with a persistent identity,
+  so the system does not ask again after every rebuild.
 
 ### Window & privacy
 - **True transparency** — the opacity slider maps 1:1 to the window alpha (5–100 %), no perpetual blur.
-- **Optional frosted glass** (AppKit vibrancy) for readability at high transparency.
-- **Invisible to other recordings** — `NSWindowSharingNone` removes the window from OBS, Zoom, QuickTime, etc.
-- **Accessory mode** — hide from the Dock and `⌘Tab`, keep a menu bar icon.
+- **Optional frosted glass** for readability at high transparency.
+- **Invisible to other recordings** — the window is excluded from OBS, Zoom, QuickTime and friends.
+- **Accessory mode** — hide from the Dock / taskbar, keep a menu bar / tray icon.
 - **Draggable** from the header and dialogs; position and size are persisted.
 - **No telemetry, no analytics, no background polling.**
 
-| Providers | Privacy |
+| Providers | Transparency |
 |---|---|
-| ![Settings — providers](docs/screenshots/settings-providers.png) | ![Settings — privacy](docs/screenshots/settings-privacy.png) |
+| ![Settings — providers](docs/screenshots/settings-providers.png) | ![Settings — transparency](docs/screenshots/settings-transparency.png) |
 
 ## Install
 
-### Requirements
-- macOS 13 Ventura or newer
-- Apple Silicon (the published DMG is `arm64`; Intel Macs can build from source)
+### macOS
 
-### Download
+Requirements: macOS 13 Ventura or newer, Apple Silicon (the published DMG is `arm64`;
+Intel Macs can build from source).
 
 1. Grab the latest `TrueHalo-*-arm64.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Open the DMG and drag **TrueHalo** into **Applications**.
-3. On the first launch macOS will warn that the app was not notarized. This is expected:
+3. On the first launch the system will warn that the app was not notarized. This is expected:
    the build is signed with a self-signed local certificate, not a paid Apple Developer ID.
 
    **macOS 15+:** System Settings → Privacy & Security → scroll down → **Open Anyway**.
@@ -105,16 +115,21 @@ the same idea with a much smaller footprint, provider freedom and stricter priva
    xattr -dr com.apple.quarantine /Applications/TrueHalo.app
    ```
 
-4. Grant **Screen Recording** when asked:
-   System Settings → Privacy & Security → **Screen & System Audio Recording** → enable **TrueHalo** →
-   restart the app.
+4. Grant **Screen Recording** when asked: System Settings → Privacy & Security →
+   **Screen & System Audio Recording** → enable **TrueHalo** → restart the app.
+
+### Windows
+
+The Windows port is in progress. Until it ships, there is no installer to download:
+the capture backend, credential storage and bundle targets are being ported, after which
+CI will publish `.exe` / `.msi` files in the same release.
 
 ### First run
 
 1. Click the gear icon → **AI Providers & Models**.
 2. Pick a provider and paste an API key:
    [OpenRouter](https://openrouter.ai/keys) · [Google AI Studio](https://aistudio.google.com/app/apikey) · [OpenAI](https://platform.openai.com/api-keys)
-3. Press **Save** — the key goes straight into the macOS Keychain.
+3. Press **Save** — the key goes straight into the system keychain.
 4. Select a model, close Settings, and start chatting.
 
 ### Build from source
@@ -124,28 +139,28 @@ git clone https://github.com/Neksand/TrueHalo.git
 cd TrueHalo
 npm install
 
-# One-time: create a stable local signing identity (keeps Screen Recording across rebuilds)
+# One-time: create a stable local signing identity (keeps screen recording across rebuilds)
 npm run sign:setup
 
-# Build, sign and install into /Applications
+# Build, sign and install
 npm run app:install
 
-# Or: build a DMG
+# Or: build an installer
 npm run app:build -- --release --dmg --install
 ```
 
 Prerequisites: Xcode Command Line Tools (`xcode-select --install`), Node.js 18+, Rust stable.
 
-> `npm run tauri dev` runs an unsigned debug binary, so macOS cannot persist Screen Recording
-> permission for it. Use the signed `/Applications` build when testing screenshots.
+> `npm run tauri dev` runs an unsigned debug binary, so the system cannot persist the
+> screen-recording permission for it. Use the signed `/Applications` build when testing screenshots.
 
 ## Hotkeys
 
 | Shortcut | Action |
 |---|---|
-| `⌥Space` | Show / hide the overlay (works globally) |
-| `⌥⇧2` | Capture a region and attach it |
-| `⌥⇧3` | Capture the full screen and attach it |
+| `⌥Space` / `Alt+Space` | Show / hide the overlay (global) |
+| `⌥⇧2` / `Alt+Shift+2` | Capture a region and attach it |
+| `⌥⇧3` / `Alt+Shift+3` | Capture the full screen and attach it |
 | `Esc` | Stop streaming / quick-hide |
 | `↵` | Send message |
 | `⇧↵` | New line |
@@ -153,23 +168,24 @@ Prerequisites: Xcode Command Line Tools (`xcode-select --install`), Node.js 18+,
 ## How it works
 
 ```
-⌥⇧2 ──► hide overlay (NSApp hide:)
-      ──► /usr/sbin/screencapture
-      ──► downscale + JPEG compression (Rust, in memory)
-      ──► base64 → React state
-      ──► POST /chat/completions (SSE)
-      ──► streaming tokens → Markdown
+hotkey ──► hide overlay
+       ──► native screen capture
+       ──► downscale + JPEG compression (Rust, in memory)
+       ──► base64 → React state
+       ──► POST /chat/completions (SSE)
+       ──► streaming tokens → Markdown
 ```
 
-All AppKit calls are marshalled to the main thread, window geometry is flushed to SQLite from a
-background thread, and the overlay is hidden with `NSApp hide:` rather than `NSWindow.orderOut`
-(the latter makes AppKit terminate the process ~1.7 s later).
+Platform code is quarantined behind small modules (`overlay`, `capture`, `auth`), so the
+same frontend and the same streaming core run on every OS. All native UI calls are marshalled
+to the main thread, window geometry is flushed to SQLite from a background thread, and the
+overlay is hidden without destroying its window.
 
 More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · [SECURITY.md](SECURITY.md).
 
 ## Privacy & security
 
-- **Keys**: macOS Keychain (`Security.framework`), service `com.truehalo.desktop`.
+- **Keys**: system credential store (macOS Keychain today, Windows Credential Manager in the port).
   Existence checks read attributes only, so Settings never asks for your login password.
   A one-click **Fix** in Settings → Screen Recording & Privacy re-binds keys created by older builds.
 - **Network**: direct HTTPS to the provider you chose. Nothing else. No telemetry.
@@ -183,18 +199,18 @@ Full threat model: [SECURITY.md](SECURITY.md).
 
 | Symptom | Fix |
 |---|---|
-| “TrueHalo is damaged and can’t be opened” | `xattr -dr com.apple.quarantine /Applications/TrueHalo.app`, then open again |
-| Screenshots keep asking for permission | System Settings → Privacy & Security → Screen & System Audio Recording → toggle TrueHalo **off and on** |
-| macOS asks for the login password when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
-| Hotkeys do nothing | Another app owns `⌥Space`; quit it or change the global shortcut |
+| macOS: “TrueHalo is damaged and can’t be opened” | `xattr -dr com.apple.quarantine /Applications/TrueHalo.app`, then open again |
+| Screenshots keep asking for permission | Open the system privacy settings, toggle TrueHalo **off and on**, restart the app |
+| A password prompt appears when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
+| Hotkeys do nothing | Another app owns the shortcut; quit it or change the global shortcut |
 | Model list is empty | The provider rejected the key (401/429) — check the key and your quota |
 
-Logs: `~/Library/Logs/TrueHalo/truehalo.log`.
+Logs: `~/Library/Logs/TrueHalo/truehalo.log` (macOS).
 
 ## Roadmap
 
 - [ ] Windows build (Credential Manager + Win32 capture backend)
-- [ ] Universal binary (Apple Silicon + Intel)
+- [ ] Universal macOS binary (Apple Silicon + Intel)
 - [ ] Assistant profiles (interview, meeting, sales)
 - [ ] Optional click-through mode
 - [ ] Local models via Ollama
@@ -206,20 +222,20 @@ Logs: `~/Library/Logs/TrueHalo/truehalo.log`.
 | Shell | Tauri 2 |
 | Backend | Rust, Tokio, reqwest, rusqlite |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS |
-| Capture | `screencapture` + `image` crate |
-| Credentials | `security-framework` (macOS Keychain) |
-| Window | AppKit (`NSApplication`, `NSWindow`) via Objective-C runtime |
+| Capture | macOS `screencapture` · Windows backend in progress |
+| Credentials | macOS Keychain · Windows Credential Manager (in progress) |
+| Window | AppKit on macOS · Win32 on Windows (in progress) |
 
 ```
 src/                  React UI (chat, providers, capture, settings)
 src-tauri/src/
 ├── ai/               provider clients (OpenRouter, Gemini, OpenAI) + SSE streaming
-├── auth/             macOS Keychain integration
+├── auth/             credential storage
 ├── capture/          screen capture, compression, permissions
 ├── commands/         typed IPC surface
 ├── storage/          SQLite (sessions, messages, preferences)
 ├── overlay.rs        safe show/hide/is_visible for the overlay
-└── macos.rs          minimal Objective-C runtime helpers
+└── macos.rs          Objective-C runtime helpers (macOS backend)
 scripts/              build, signing and packaging
 docs/                 architecture notes and screenshots
 ```

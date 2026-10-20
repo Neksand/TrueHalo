@@ -18,7 +18,7 @@ fn keychain_error(provider: &str, err: KeychainError) -> String {
             format!("No API key found for '{provider}'. Open Settings → AI Providers and save one.")
         }
         _ => format!(
-            "Could not read the '{provider}' key from Keychain ({err}). \
+            "Could not read the '{provider}' key from the keychain ({err}). \
              Open Settings → Privacy → “Fix” once, then try again."
         ),
     }
