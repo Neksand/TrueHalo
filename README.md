@@ -1,10 +1,6 @@
 <div align="center">
 
-<svg width="104" height="104" viewBox="0 0 104 104" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TrueHalo logo">
-  <circle cx="52" cy="30" r="26" fill="none" stroke="#fbbf24" stroke-width="6"/>
-  <rect x="18" y="34" width="68" height="52" rx="16" fill="#0f172a" stroke="#fbbf24" stroke-width="2"/>
-  <text x="52" y="69" fill="#f8fafc" font-family="ui-sans-serif, system-ui, sans-serif" font-size="26" font-weight="700" text-anchor="middle">T</text>
-</svg>
+<img src="src/assets/logo.png" width="128" alt="TrueHalo" />
 
 # TrueHalo
 
@@ -22,46 +18,7 @@ Ask one question about what is on your screen — get an answer in a floating wi
 
 </div>
 
-<p align="center">
-<svg width="860" height="392" viewBox="0 0 860 392" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TrueHalo overlay on a desktop">
-  <rect width="860" height="392" rx="20" fill="#0b1020"/>
-  <circle cx="720" cy="64" r="128" fill="#141c33"/>
-  <circle cx="96" cy="344" r="150" fill="#0f1729"/>
-  <rect x="24" y="24" width="812" height="344" rx="14" fill="none" stroke="#1e293b"/>
-
-  <rect x="52" y="46" width="756" height="300" rx="16" fill="#0f172a" stroke="#2b3652"/>
-  <path d="M52 62 a16 16 0 0 1 16 -16 h724 a16 16 0 0 1 16 16 v22 h-756 z" fill="#172036"/>
-  <circle cx="78" cy="65" r="5" fill="#ff5f57"/>
-  <circle cx="96" cy="65" r="5" fill="#febc2e"/>
-  <circle cx="114" cy="65" r="5" fill="#28c840"/>
-  <text x="140" y="70" fill="#e2e8f0" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="600">TrueHalo AI Overlay</text>
-
-  <rect x="618" y="55" width="168" height="20" rx="10" fill="#1e2a44"/>
-  <text x="702" y="69" fill="#9fb3d1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" text-anchor="middle">OpenRouter · vision model</text>
-
-  <rect x="76" y="92" width="470" height="58" rx="12" fill="#141d31" stroke="#243149"/>
-  <text x="94" y="116" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Your screenshot is analyzed locally, then sent</text>
-  <text x="94" y="134" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">to the provider you chose — nothing else leaves.</text>
-
-  <rect x="76" y="164" width="286" height="46" rx="10" fill="#0b1220" stroke="#fbbf24"/>
-  <rect x="90" y="176" width="34" height="22" rx="4" fill="#1e293b"/>
-  <circle cx="100" cy="183" r="3" fill="#fbbf24"/>
-  <path d="M94 194 l10 -7 l7 5 l8 -9" fill="none" stroke="#94a3b8" stroke-width="2"/>
-  <text x="134" y="185" fill="#e2e8f0" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="600">region · 1180 × 640</text>
-  <text x="134" y="200" fill="#94a3b8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10">412 KB after compression</text>
-
-  <rect x="404" y="228" width="386" height="46" rx="12" fill="#26344f"/>
-  <text x="422" y="256" fill="#e2e8f0" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">What does this error mean?</text>
-
-  <rect x="76" y="292" width="714" height="36" rx="10" fill="#111a2c" stroke="#243149"/>
-  <text x="94" y="315" fill="#64748b" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11">Ask about your screen…</text>
-  <rect x="742" y="300" width="34" height="20" rx="10" fill="#fbbf24"/>
-  <text x="759" y="314" fill="#111827" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" font-weight="700" text-anchor="middle">↵</text>
-
-  <rect x="560" y="360" width="248" height="22" rx="11" fill="#111a2c" stroke="#334155" stroke-dasharray="4 4"/>
-  <text x="684" y="375" fill="#94a3b8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" text-anchor="middle">invisible to OBS, Zoom, QuickTime</text>
-</svg>
-</p>
+![TrueHalo main window](docs/screenshots/main.png)
 
 <p align="center"><sub>The overlay stays out of other apps' recordings and never appears in its own screenshots.</sub></p>
 
@@ -136,50 +93,12 @@ the Windows backend uses Win32 (DWM acrylic, display affinity) and the Credentia
 - **Accessory mode** — hide from the Dock / taskbar and keep a tray icon.
 - **No telemetry, ever.**
 
+| AI providers & models | Transparency & appearance |
+|---|---|
+| ![Settings — providers](docs/screenshots/settings-providers.png) | ![Settings — transparency](docs/screenshots/settings-transparency.png) |
+
 <p align="center">
-<svg width="860" height="330" viewBox="0 0 860 330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TrueHalo settings mockup">
-  <rect width="860" height="330" rx="18" fill="#0b1020"/>
-  <rect x="24" y="22" width="812" height="286" rx="14" fill="#0f172a" stroke="#2b3652"/>
-  <text x="48" y="56" fill="#f8fafc" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="700">Settings</text>
-
-  <rect x="48" y="72" width="240" height="36" rx="9" fill="#172036" stroke="#2b3652"/>
-  <rect x="72" y="86" width="72" height="8" rx="4" fill="#64748b"/>
-  <text x="72" y="120" fill="#64748b" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" transform="translate(0,-2)">opacity</text>
-  <rect x="72" y="96" width="150" height="6" rx="3" fill="#334155"/>
-  <rect x="72" y="96" width="108" height="6" rx="3" fill="#fbbf24"/>
-  <circle cx="180" cy="99" r="7" fill="#fbbf24"/>
-
-  <rect x="48" y="128" width="240" height="72" rx="9" fill="#141d31" stroke="#243149"/>
-  <text x="66" y="152" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="600">Excluded from recordings</text>
-  <text x="66" y="172" fill="#94a3b8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10">Windows 10 2004+ · macOS 13+</text>
-  <rect x="228" y="140" width="42" height="20" rx="10" fill="#fbbf24"/>
-  <circle cx="259" cy="150" r="8" fill="#111827"/>
-
-  <rect x="48" y="214" width="240" height="72" rx="9" fill="#141d31" stroke="#243149"/>
-  <text x="66" y="238" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="600">Keys</text>
-  <text x="66" y="258" fill="#94a3b8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10">System credential store</text>
-  <rect x="196" y="226" width="74" height="20" rx="10" fill="#14351f" stroke="#1f6b3a"/>
-  <text x="233" y="240" fill="#4ade80" font-family="ui-sans-serif, system-ui, sans-serif" font-size="9" text-anchor="middle">connected</text>
-
-  <rect x="312" y="72" width="500" height="214" rx="12" fill="#101a2c" stroke="#243149"/>
-  <text x="336" y="102" fill="#e2e8f0" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="700">AI providers &amp; models</text>
-
-  <rect x="336" y="118" width="452" height="48" rx="9" fill="#16213a"/>
-  <circle cx="358" cy="142" r="8" fill="#fbbf24"/>
-  <text x="376" y="138" fill="#f8fafc" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="600">OpenRouter</text>
-  <text x="376" y="154" fill="#94a3b8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10">key stored in the system keychain</text>
-  <rect x="700" y="132" width="70" height="20" rx="10" fill="#14351f" stroke="#1f6b3a"/>
-  <text x="735" y="146" fill="#4ade80" font-family="ui-sans-serif, system-ui, sans-serif" font-size="9" text-anchor="middle">active</text>
-
-  <rect x="336" y="176" width="452" height="48" rx="9" fill="#131c30" stroke="#243149"/>
-  <circle cx="358" cy="200" r="8" fill="#334155"/>
-  <text x="376" y="196" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="600">Google Gemini</text>
-  <text x="376" y="212" fill="#64748b" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10">add a key to enable</text>
-
-  <rect x="336" y="234" width="452" height="38" rx="9" fill="#131c30" stroke="#243149"/>
-  <circle cx="358" cy="253" r="8" fill="#334155"/>
-  <text x="376" y="257" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11">OpenAI</text>
-</svg>
+<img src="docs/screenshots/settings-privacy.png" width="820" alt="Settings — screen recording and privacy" />
 </p>
 
 ## TrueHalo vs Cheating Daddy
