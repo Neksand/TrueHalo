@@ -44,4 +44,3 @@ security-framework = "2.11"
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }
-raw-window-handle = "0.6"

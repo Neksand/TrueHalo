@@ -119,7 +119,13 @@ export const App: React.FC = () => {
         setSettings(loaded);
 
         // Re-apply natively so backend and UI never drift apart.
-        await tauriApi.setScreenRecordingProtection(loaded.excludeScreenRecord);
+        const protectionApplied = await tauriApi.setScreenRecordingProtection(
+          loaded.excludeScreenRecord,
+        );
+        if (loaded.excludeScreenRecord && !protectionApplied) {
+          // Unsupported OS/build (Windows < 10 2004): keep the UI honest.
+          setSettings((prev) => ({ ...prev, excludeScreenRecord: false }));
+        }
         await tauriApi.setVibrancy(loaded.vibrancy);
         await tauriApi.setHideFromDock(loaded.hideFromDock);
         await tauriApi.setAlwaysOnTop(loaded.alwaysOnTop);
@@ -189,7 +195,12 @@ export const App: React.FC = () => {
 
   const handleToggleScreenRecord = async (val: boolean) => {
     updateSettings({ excludeScreenRecord: val });
-    await tauriApi.setScreenRecordingProtection(val);
+    const applied = await tauriApi.setScreenRecordingProtection(val);
+    if (val && !applied) {
+      // Older Windows builds cannot hide a window from capture without
+      // blacking it out — leave the switch off instead of lying to the user.
+      updateSettings({ excludeScreenRecord: false });
+    }
   };
 
   const handleToggleAlwaysOnTop = async (val: boolean) => {

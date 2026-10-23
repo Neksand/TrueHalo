@@ -743,6 +743,10 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                     The TrueHalo window is excluded from captures by other apps
                     (OBS, Zoom, QuickTime).
                   </p>
+                  <p className="text-[10px] text-slate-500 mt-1 max-w-md leading-relaxed">
+                    macOS 13+ or Windows 10 2004+. On older Windows builds the
+                    window stays visible in recordings.
+                  </p>
                 </div>
 
                 <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">

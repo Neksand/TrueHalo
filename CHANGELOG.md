@@ -37,6 +37,9 @@ First public release.
   so the same strings fit the upcoming Windows build.
 
 ### Fixed
+- Windows: screen-recording protection is applied in Rust before the first paint, and is skipped on
+  Windows builds older than 2004 where the API degrades to a black rectangle. The settings switch now
+  reflects the real state instead of showing protection that is not active.
 - Capture from a worker thread no longer traps in AppKit (`Must only be used from the main thread`).
 - Hiding the overlay no longer terminates the process: the app is hidden with `NSApp hide:`
   instead of ordering out the last window.

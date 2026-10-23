@@ -183,6 +183,10 @@ WebView2 automatically if it is missing.
 
 Region capture opens a dimmed selection overlay — drag a rectangle, or press `Esc` to cancel.
 
+Screen-recording exclusion requires **Windows 10 version 2004 (build 19041) or newer**. On older
+builds Windows turns the exclusion into a black rectangle, so TrueHalo keeps the switch off and the
+window stays visible in captures instead.
+
 ### First run
 
 1. Click the gear icon → **AI Providers & Models**.
@@ -258,6 +262,7 @@ flushed to SQLite from a background thread, and the overlay is hidden without de
 | Screenshots keep asking for permission | System privacy settings → toggle TrueHalo **off and on** → restart the app |
 | A password prompt appears when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
 | Windows: “Windows protected your PC” | SmartScreen → **More info** → **Run anyway** |
+| Windows: a black rectangle appears in a recording | Capture exclusion needs Windows 10 2004+. On older builds TrueHalo disables the switch instead of blacking the window out |
 | Windows: a protected video captures as black | DRM windows cannot be captured by any screen recorder |
 | Hotkeys do nothing | Another app owns the shortcut; quit it or change the global shortcut |
 | Model list is empty | The provider rejected the key (401/429) — check the key and your quota |

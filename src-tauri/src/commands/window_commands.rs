@@ -140,58 +140,108 @@ pub fn set_hide_from_dock(app: AppHandle, hide: bool) -> Result<bool, String> {
 
 #[command]
 pub fn set_screen_recording_protection(app: AppHandle, exclude: bool) -> Result<bool, String> {
-    #[cfg(windows)]
-    {
-        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-        use std::ffi::c_void;
+    apply_capture_exclusion(&app, exclude)
+}
 
-        // WDA_NONE = 0x00000000, WDA_EXCLUDEFROMCAPTURE = 0x00000011 (Windows 10 2004+).
-        const WDA_NONE: u32 = 0x0000_0000;
-        const WDA_EXCLUDEFROMCAPTURE: u32 = 0x0000_0011;
+/// Windows: hide the window from screen capture APIs.
+///
+/// `WDA_EXCLUDEFROMCAPTURE` removes the window from recordings entirely, so the
+/// desktop behind it shows through. It exists since Windows 10 2004 (build
+/// 19041); on older builds the OS silently degrades it to `WDA_MONITOR`, which
+/// paints a black rectangle over the content underneath. We therefore check the
+/// build first and simply leave the window untouched when exclusion is not
+/// available, instead of producing that black box.
+#[cfg(windows)]
+fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, String> {
+    const MIN_BUILD_FOR_EXCLUSION: u32 = 19_041;
 
-        #[link(name = "user32")]
-        extern "system" {
-            fn SetWindowDisplayAffinity(hwnd: *mut c_void, affinity: u32) -> i32;
-        }
+    let build = windows_build_number();
+    let Some(window) = app.get_webview_window("main") else {
+        return Ok(false);
+    };
 
-        if let Some(window) = app.get_webview_window("main") {
-            if let Ok(handle) = window.window_handle() {
-                if let RawWindowHandle::Win32(win32) = handle.as_raw() {
-                    let affinity = if exclude {
-                        WDA_EXCLUDEFROMCAPTURE
-                    } else {
-                        WDA_NONE
-                    };
-                    let ok = unsafe {
-                        SetWindowDisplayAffinity(win32.hwnd.get() as *mut c_void, affinity) != 0
-                    };
-                    tracing::info!("Windows SetWindowDisplayAffinity({}) -> {}", affinity, ok);
-                    return Ok(ok);
-                }
-            }
-        }
+    if exclude && build < MIN_BUILD_FOR_EXCLUSION {
+        // Make sure no stale affinity from an earlier session survives.
+        let _ = window.set_content_protected(false);
+        tracing::warn!(
+            "Recording protection requires Windows 10 2004+ (build {} detected); leaving the window visible in captures",
+            build
+        );
+        return Ok(false);
     }
 
-    #[cfg(target_os = "macos")]
-    {
-        if let Some(window) = app.get_webview_window("main") {
-            // NSWindowSharingType:
-            // 0 = NSWindowSharingNone (invisible to other apps' screen recordings & screenshots)
-            // 1 = NSWindowSharingReadOnly (normal recording)
-            let sharing_type: isize = if exclude { 0 } else { 1 };
+    match window.set_content_protected(exclude) {
+        Ok(()) => {
+            tracing::info!(
+                "Windows display affinity: exclude={} (build {})",
+                exclude,
+                build
+            );
+            Ok(true)
+        }
+        Err(err) => {
+            tracing::warn!("Could not set the Windows display affinity: {}", err);
+            Ok(false)
+        }
+    }
+}
 
-            if let Ok(ns_win_ptr) = window.ns_window() {
-                unsafe {
-                    crate::macos::send(
-                        ns_win_ptr,
-                        "setSharingType:",
-                        sharing_type as *mut std::ffi::c_void,
-                    );
-                }
-                tracing::info!("macOS NSWindow.sharingType set to: {}", sharing_type);
-                return Ok(true);
+/// macOS: `NSWindowSharingType`.
+#[cfg(target_os = "macos")]
+fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, String> {
+    if let Some(window) = app.get_webview_window("main") {
+        // NSWindowSharingType:
+        // 0 = NSWindowSharingNone (invisible to other apps' recordings & screenshots)
+        // 1 = NSWindowSharingReadOnly (normal recording)
+        let sharing_type: isize = if exclude { 0 } else { 1 };
+
+        if let Ok(ns_win_ptr) = window.ns_window() {
+            unsafe {
+                crate::macos::send(
+                    ns_win_ptr,
+                    "setSharingType:",
+                    sharing_type as *mut std::ffi::c_void,
+                );
             }
+            tracing::info!("macOS NSWindow.sharingType set to: {}", sharing_type);
+            return Ok(true);
         }
     }
     Ok(false)
+}
+
+/// Real Windows build number, unaffected by the app compatibility manifest.
+#[cfg(windows)]
+fn windows_build_number() -> u32 {
+    #[repr(C)]
+    struct OsVersionInfoW {
+        size: u32,
+        major: u32,
+        minor: u32,
+        build: u32,
+        platform: u32,
+        csd_version: [u16; 128],
+    }
+
+    #[link(name = "ntdll")]
+    extern "system" {
+        fn RtlGetVersion(info: *mut OsVersionInfoW) -> i32;
+    }
+
+    let mut info = OsVersionInfoW {
+        size: std::mem::size_of::<OsVersionInfoW>() as u32,
+        major: 0,
+        minor: 0,
+        build: 0,
+        platform: 0,
+        csd_version: [0; 128],
+    };
+
+    // RtlGetVersion returns STATUS_SUCCESS (0).
+    let status = unsafe { RtlGetVersion(&mut info) };
+    if status == 0 {
+        info.build
+    } else {
+        0
+    }
 }

@@ -184,10 +184,25 @@ pub fn run() {
                 .flatten()
                 .map(|v| v == "true")
                 .unwrap_or(false);
+            // Screen-recording protection is on by default.
+            let exclude_recording = db
+                .get_preference("exclude_screen_recording")
+                .ok()
+                .flatten()
+                .map(|v| v == "true")
+                .unwrap_or(true);
 
             restore_window_geometry(app.handle(), &db);
 
             app.manage(AppState::new(db));
+
+            // Apply the persisted capture protection before the first paint, so
+            // the overlay is never visible in a recording, even for a frame.
+            // On unsupported Windows builds this is a no-op instead of a black box.
+            let _ = window_commands::set_screen_recording_protection(
+                app.handle().clone(),
+                exclude_recording,
+            );
 
             // Persist the overlay frame whenever the user drags or resizes it.
             spawn_geometry_flusher(app.handle().clone());
