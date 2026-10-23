@@ -6,9 +6,17 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+- Windows: hotkey hints now show `Alt+Space`, `Alt+Shift+2` and `Alt+Shift+3` instead of the
+  macOS glyphs (`⌥`, `⇧`).
+- Windows: the "hide from the Dock / taskbar" switch reverts when the platform cannot honour it,
+  so the UI never claims a change that did not happen.
+- README rewritten in plain language and now embeds the 37-second launch film.
+
 ### Planned
-- Universal binary (Apple Silicon + Intel)
-- Assistant profiles (interview, meeting, sales)
+- Assistant profiles with file-based context injection
+- Smart token optimization (same answer quality, fewer tokens)
+- Major CPU and memory reduction
 - Optional click-through mode
 
 ## [0.1.0] — 2026-10-20
