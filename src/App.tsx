@@ -127,7 +127,11 @@ export const App: React.FC = () => {
           setSettings((prev) => ({ ...prev, excludeScreenRecord: false }));
         }
         await tauriApi.setVibrancy(loaded.vibrancy);
-        await tauriApi.setHideFromDock(loaded.hideFromDock);
+        const dockApplied = await tauriApi.setHideFromDock(loaded.hideFromDock);
+        if (loaded.hideFromDock && !dockApplied) {
+          // Accessory mode is macOS-only.
+          setSettings((prev) => ({ ...prev, hideFromDock: false }));
+        }
         await tauriApi.setAlwaysOnTop(loaded.alwaysOnTop);
       } catch (e) {
         console.warn("Failed to load stored preferences:", e);
@@ -190,7 +194,8 @@ export const App: React.FC = () => {
 
   const handleToggleHideFromDock = async (val: boolean) => {
     updateSettings({ hideFromDock: val });
-    await tauriApi.setHideFromDock(val);
+    const applied = await tauriApi.setHideFromDock(val);
+    if (val && !applied) updateSettings({ hideFromDock: false });
   };
 
   const handleToggleScreenRecord = async (val: boolean) => {

@@ -1,97 +1,79 @@
 <div align="center">
 
-<img src="src/assets/logo.png" width="128" alt="TrueHalo" />
+<img src="src/assets/logo.png" width="120" alt="TrueHalo" />
 
 # TrueHalo
 
-**A native, privacy-first AI screen overlay. 19 MB, not 200.**<br/>
-Ask one question about what is on your screen — get an answer in a floating window that other apps cannot see.
+**A native AI overlay that answers questions about what is on your screen.**<br/>
+Press a hotkey, grab a region, and get an answer in a floating window — in any app, on macOS and Windows.
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](https://www.gnu.org/licenses/gpl-3.0)
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](https://www.rust-lang.org)
 [![Release](https://img.shields.io/github/v/release/Neksand/TrueHalo?color=fbbf24&label=release)](https://github.com/Neksand/TrueHalo/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20arm64%20%7C%20Windows%20x64-111827)](#platform-support)
-[![Size](https://img.shields.io/badge/app-19%20MB-fbbf24)](#the-anti-electron-bet)
+[![Size](https://img.shields.io/badge/app-19%20MB-fbbf24)](#why-truehalo-is-small)
 
-[Download](#install) · [Features](#features) · [Comparison](#truehalo-vs-cheating-daddy) · [How it works](#how-it-works) · [Roadmap](#roadmap)
+[Watch the demo](#watch-the-demo) · [Features](#features) · [Install](#install) · [Comparison](#truehalo-vs-cheating-daddy) · [Roadmap](#roadmap)
 
 </div>
 
-![TrueHalo main window](docs/screenshots/main.png)
+## Watch the demo
 
-<p align="center"><sub>The overlay stays out of other apps' recordings and never appears in its own screenshots.</sub></p>
+<p align="center">
+  <a href="docs/media/truehalo-launch.mp4">
+    <img src="docs/media/launch-preview.gif" width="860" alt="TrueHalo reading a code region and answering in the overlay" />
+  </a>
+</p>
 
-## The anti-Electron bet
+<p align="center">
+  <sub>▶ <a href="docs/media/truehalo-launch.mp4"><b>Watch the 37-second launch film</b></a> (1080p, with sound)</sub>
+</p>
 
-Most AI overlay apps ship a full Chromium runtime. TrueHalo ships **a Rust core and the WebView your OS already has**.
+## What is TrueHalo?
 
-| | Typical Electron overlay | TrueHalo |
-|---|---|---|
-| Installer | 200+ MB | **~19 MB** |
-| Cold start | several seconds | near-instant |
-| Idle RAM | hundreds of MB | a fraction of that |
-| Runtime | bundled Chromium | system WebView |
+TrueHalo is a small desktop app that sits on top of everything you do. When you need help with
+something on screen — an error, a chart, a piece of code, a form — you press one hotkey, drag a box
+around it, and ask a question. The answer appears in a translucent window that stays on top.
 
-Same idea, a tenth of the footprint — and no second browser living on your disk.
+It is **not** a background recorder or an always-listening assistant:
+
+- **You start every request.** No timers, no continuous capture, no microphone.
+- **You choose the model.** Bring an API key from OpenRouter, Google Gemini or OpenAI.
+- **Your keys stay in the OS.** They live in the system credential store and never reach the UI layer.
+
+Typical uses: debugging code, reading dense documentation, understanding dashboards, translating an
+error message, or summarising a long page you are allowed to look at.
+
+## Why TrueHalo is small
+
+Most AI overlays are Electron apps: they ship a whole Chromium browser (200+ MB) just to draw one
+window. TrueHalo is written in Rust and uses the WebView that your operating system already has.
 
 <p align="center">
 <svg width="860" height="150" viewBox="0 0 860 150" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Installer size comparison">
   <rect width="860" height="150" rx="16" fill="#0b1020"/>
   <text x="28" y="34" fill="#e2e8f0" font-family="ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="600">Installer size</text>
-  <text x="28" y="74" fill="#94a3b8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Electron overlay</text>
-  <rect x="180" y="60" width="620" height="22" rx="11" fill="#334155"/>
+  <text x="28" y="74" fill="#94a3b8" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12">Typical Electron overlay</text>
+  <rect x="230" y="60" width="570" height="22" rx="11" fill="#334155"/>
   <text x="812" y="76" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" text-anchor="end">200+ MB</text>
   <text x="28" y="116" fill="#f8fafc" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="600">TrueHalo</text>
-  <rect x="180" y="102" width="74" height="22" rx="11" fill="#fbbf24"/>
-  <text x="266" y="118" fill="#fbbf24" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700">19 MB</text>
+  <rect x="230" y="102" width="68" height="22" rx="11" fill="#fbbf24"/>
+  <text x="314" y="118" fill="#fbbf24" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700">19 MB</text>
 </svg>
 </p>
 
-## Why TrueHalo
-
-- **On demand, not always-on.** No background screen reading, no microphone, no timers. One hotkey, one frame, one answer.
-- **Your keys never touch the UI.** API keys live in the system credential store and are used only by the Rust backend.
-- **Provider freedom.** OpenRouter, Google Gemini and OpenAI — vision models from any of them, swapped in two clicks.
-- **Built for the overlay life.** Global show/hide hotkey, real window transparency, accessory mode, remembered geometry.
-- **Quiet by default.** No telemetry, no analytics, no accounts.
-
-## Platform support
-
-| Platform | Status | Installer |
+| | Typical Electron overlay | TrueHalo |
 |---|---|---|
-| macOS 13+ · **Apple Silicon (arm64) only** | ✅ Available | `TrueHalo-0.1.0-arm64.dmg` |
-| Windows 10 2004+ / 11 · x64 | ✅ Available | `TrueHalo_0.1.0_x64-setup.exe` (NSIS) |
+| Download | 200+ MB | **9 MB DMG · 4.7 MB EXE** |
+| Installed app | 300–500 MB | **~19 MB** |
+| Runtime | bundled Chromium | the system WebView |
+| Idle memory | hundreds of MB | a fraction of that |
+| Cold start | seconds | almost instant |
 
-> **macOS note:** TrueHalo targets Apple Silicon exclusively — macOS 13 Ventura or newer, M1 or later.
+## Screenshots
 
-The UI and the Rust core are platform-neutral. The macOS backend uses AppKit and the Keychain;
-the Windows backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager.
-
-## Features
-
-### AI core
-- **Three providers out of the box** — OpenRouter, Google Gemini, OpenAI, with a live model catalog.
-- **Streaming answers** with instant cancellation (`Esc` or Stop).
-- **Vision-native** — screenshots go straight to multimodal models such as Claude, Gemini and GPT-4o.
-- **Token awareness** — per-message and per-session usage; only the newest screenshot is sent in full,
-  older ones are replaced with a lightweight placeholder.
-
-### Capture
-- **Two hotkeys** — region and full-screen.
-- **Compressed before upload** — a raw Retina PNG (10–20 MB) usually lands under 1 MB with the
-  Balanced preset (Quality / Balanced / Speed).
-- **Never captures itself** — the overlay hides before the shutter.
-- **Stable screen-recording grant** — builds are signed with a persistent identity, so macOS does not
-  re-ask after every rebuild.
-
-### Window & privacy
-- **True transparency** — the opacity slider maps 1:1 to window alpha (5–100 %).
-- **Optional frosted glass** for readability at high transparency.
-- **Invisible to recorders** — excluded from OBS, Zoom, QuickTime and friends.
-  (`NSWindowSharingNone` on macOS, `WDA_EXCLUDEFROMCAPTURE` on Windows 10 2004+.)
-- **Accessory mode** — hide from the Dock / taskbar and keep a tray icon.
-- **No telemetry, ever.**
+<img src="docs/screenshots/main.png" alt="TrueHalo main window with chat" />
 
 | AI providers & models | Transparency & appearance |
 |---|---|
@@ -101,183 +83,192 @@ the Windows backend uses Win32 (DWM acrylic, display affinity) and the Credentia
 <img src="docs/screenshots/settings-privacy.png" width="820" alt="Settings — screen recording and privacy" />
 </p>
 
+## Features
+
+### Ask about anything on screen
+- **Two capture modes.** Select a region (`⌥⇧2` on macOS, `Alt+Shift+2` on Windows) or grab the whole
+  screen (`⌥⇧3` / `Alt+Shift+3`).
+- **Works over any app.** The overlay floats above your work and can be moved by its header.
+- **Images are compressed locally** before they are sent, so uploads stay small (a Retina screenshot
+  usually drops from 10–20 MB to under 1 MB).
+
+### Chat that feels native
+- **Streaming answers** — text appears as the model writes it; stop it any time with `Esc`.
+- **Three providers, one UI** — OpenRouter, Google Gemini and OpenAI, with a live model list.
+- **Vision models** — screenshots are sent as images to models such as Claude, Gemini and GPT-4o.
+- **Token counter** — see usage per message and per session; old screenshots are replaced with a
+  short placeholder so you do not pay for the same image twice.
+
+### Built for a window that floats on top
+- **Real transparency** — the opacity slider (5–100 %) changes the actual window alpha.
+- **Optional frosted glass** on top of the transparency, for readability.
+- **Invisible to screen recorders** — OBS, Zoom and QuickTime do not see the overlay at all
+  (`NSWindowSharingNone` on macOS, `WDA_EXCLUDEFROMCAPTURE` on Windows 10 2004+).
+- **Tray mode** — hide TrueHalo from the Dock or taskbar and control it from the menu bar / tray.
+- **Remembers its place** — position, size and settings are stored locally in SQLite.
+- **No telemetry, no accounts, no analytics.**
+
 ## TrueHalo vs Cheating Daddy
 
-[Cheating Daddy](https://github.com/sohzm/cheating-daddy) is the project that popularized this idea.
-TrueHalo is an **independent implementation** for people who want the same workflow with a much
-smaller footprint, provider freedom and stricter privacy defaults.
+[Cheating Daddy](https://github.com/sohzm/cheating-daddy) popularised the idea of an AI overlay.
+TrueHalo is an **independent implementation** with a different trade-off: a much smaller app, your own
+providers, and no continuous audio or screen capture.
 
 | | Cheating Daddy | TrueHalo |
 |---|---|---|
 | Runtime | Electron | Tauri 2 (Rust + system WebView) |
-| Installer | Electron bundle | **~19 MB** |
+| Download | Electron bundle | **9 MB DMG · 4.7 MB EXE** |
 | AI providers | Google Gemini Live | OpenRouter · Google Gemini · OpenAI |
-| Screen analysis | Continuous during a session | On demand: region or full-screen hotkey |
-| Audio capture | System audio + microphone | Not included — screen only, by design |
-| Assistant profiles | 5 fixed presets | Free-form chat today · **context injection planned** |
-| Overlay privacy | Transparent, click-through | Hidden from other apps' recordings, accessory mode |
-| API key storage | — | System credential store, never in the WebView |
-| Platforms | macOS · Windows · Linux | macOS (arm64) · Windows (x64) |
+| Screen analysis | continuous during a session | on demand, per hotkey |
+| Audio capture | system audio + microphone | not included, by design |
+| Assistant profiles | 5 fixed presets | free-form chat now · **context injection planned** |
+| Overlay privacy | transparent, click-through | hidden from recorders, tray mode |
+| API key storage | — | system credential store, never in the UI |
+| Platforms | macOS · Windows · Linux | macOS (Apple Silicon) · Windows (x64) |
 | License | GPL-3.0 | GPL-3.0 |
 
-## Features that are coming next
+## Platform support
 
-> These are **not shipped yet**. They are on the roadmap, and they are the reason TrueHalo is more
-> than a screenshot chat box.
+| Platform | Status | Installer |
+|---|---|---|
+| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.1.0-arm64.dmg` |
+| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.1.0_x64-setup.exe` |
 
-### Assistant profiles + context injection
-Drop in your own knowledge and let the model answer with it: a resume before an interview, a product
-brief before a sales call, a runbook before an incident. Upload documents once, and every screenshot
-question is answered with that context attached — no copy-pasting the same background into the chat.
-
-This is the feature we consider the biggest advantage over preset-only assistants: **your context,
-not a fixed prompt written by someone else.** File uploads and the knowledge base are in design.
-
-### Smart token optimization
-Screenshots and history are the two biggest cost drivers. The plan: reuse compressed visual context,
-deduplicate repeated frames and trim history intelligently — **lower token spend with the same answer
-quality**, instead of silently degrading responses.
-
-### Major performance optimization
-Further work on the Rust side: smaller memory peaks while decoding screenshots, fewer allocations in
-the streaming path, and a lower idle footprint. Target: stay fast on a laptop that is already running
-a meeting, an IDE and forty browser tabs.
+The React UI and the Rust core are shared. The macOS backend uses AppKit and the Keychain; the Windows
+backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager.
 
 ## Install
 
-### macOS — Apple Silicon only
+### macOS (Apple Silicon)
 
-**Requirements:** macOS 13 Ventura or newer, Apple Silicon (M1 or later).
+**You need:** macOS 13 Ventura or newer on an M1/M2/M3/M4 Mac.
 
 1. Download `TrueHalo-0.1.0-arm64.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Open the DMG and drag **TrueHalo** into **Applications**.
-3. Launch it. macOS will warn that the app cannot be verified — this is expected. The build is signed
-   with a local certificate, not a paid Apple Developer ID:
+3. Launch it. macOS will say it cannot verify the app — this is normal, because the build is signed
+   with a local certificate instead of a paid Apple Developer ID.
 
-   **macOS 15 (Sequoia) and newer**
+   **macOS 15 or newer**
    1. Open **System Settings → Privacy & Security**.
-   2. Scroll to the *Security* section and click **Open Anyway** next to TrueHalo.
-   3. Confirm with your password / Touch ID, then click **Open**.
+   2. Scroll down to *Security* and click **Open Anyway** next to TrueHalo.
+   3. Confirm with Touch ID or your password, then click **Open**.
 
    **macOS 13–14**
-   1. Right-click (or Control-click) **TrueHalo.app** in Applications.
+   1. Right-click **TrueHalo.app** in Applications.
    2. Choose **Open**, then **Open** again in the dialog.
 
-   **Terminal alternative** (removes the quarantine flag without dialogs):
+   **Prefer Terminal?** This removes the quarantine flag without dialogs:
    ```bash
    xattr -dr com.apple.quarantine /Applications/TrueHalo.app
    ```
 
-4. Grant **Screen Recording** when asked: **System Settings → Privacy & Security → Screen & System
-   Audio Recording** → enable **TrueHalo** → restart the app.
+4. When macOS asks for **Screen Recording**, allow it and restart the app:
+   **System Settings → Privacy & Security → Screen & System Audio Recording → TrueHalo**.
+   This permission is what lets the hotkeys capture the screen. It is used only after you press a
+   hotkey.
 
-### Windows — x64
+### Windows (x64)
 
-**Requirements:** Windows 10 version 2004 or newer, or Windows 11 (x64). The installer downloads
+**You need:** Windows 10 version 2004 (build 19041) or newer, or Windows 11. The installer downloads
 WebView2 automatically if it is missing.
 
 1. Download `TrueHalo_0.1.0_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
-2. Run it. If SmartScreen appears ("Windows protected your PC"), click **More info → Run anyway**.
-   The installer is not signed with a commercial Authenticode certificate.
-3. Launch TrueHalo from the Start menu or the tray icon. No screen-recording permission is required.
+2. Run it. If SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** — the
+   installer is not signed with a commercial certificate.
+3. Launch TrueHalo from the Start menu or the tray icon. Windows has no screen-recording permission,
+   so there is nothing else to approve.
 
-Region capture opens a dimmed selection overlay — drag a rectangle, or press `Esc` to cancel.
+Screen-recording exclusion needs Windows 10 2004+. On older builds TrueHalo keeps the switch off
+instead of drawing a black rectangle in recordings.
 
-Screen-recording exclusion requires **Windows 10 version 2004 (build 19041) or newer**. On older
-builds Windows turns the exclusion into a black rectangle, so TrueHalo keeps the switch off and the
-window stays visible in captures instead.
-
-### First run
+### First run (both platforms)
 
 1. Click the gear icon → **AI Providers & Models**.
-2. Pick a provider and paste a key: [OpenRouter](https://openrouter.ai/keys) ·
-   [Google AI Studio](https://aistudio.google.com/app/apikey) ·
+2. Paste an API key for a provider you already use:
+   [OpenRouter](https://openrouter.ai/keys) · [Google AI Studio](https://aistudio.google.com/app/apikey) ·
    [OpenAI](https://platform.openai.com/api-keys).
-3. Press **Save**. The key goes straight into the system credential store — the UI never receives it.
-4. Choose a model, close Settings, and press `Alt/Option + Space` whenever you need the overlay.
+3. Press **Save**. The key goes into the system credential store, not into a config file.
+4. Pick a model, close Settings, and press `⌥Space` / `Alt+Space` to show the overlay.
 
 ## Hotkeys
 
-| Shortcut | Action |
-|---|---|
-| `⌥Space` / `Alt+Space` | Show / hide the overlay (global) |
-| `⌥⇧2` / `Alt+Shift+2` | Capture a region and attach it |
-| `⌥⇧3` / `Alt+Shift+3` | Capture the full screen and attach it |
-| `Esc` | Stop streaming / quick-hide |
-| `↵` | Send message |
-| `⇧↵` | New line |
+| macOS | Windows | Action |
+|---|---|---|
+| `⌥Space` | `Alt+Space` | Show / hide the overlay |
+| `⌥⇧2` | `Alt+Shift+2` | Capture a selected region |
+| `⌥⇧3` | `Alt+Shift+3` | Capture the full screen |
+| `Esc` | `Esc` | Stop the answer / hide the overlay |
+| `↵` | `Enter` | Send |
+| `⇧↵` | `Shift+Enter` | New line |
 
 ## How it works
+
+1. You press a capture hotkey.
+2. TrueHalo hides its own window, takes one screenshot, and compresses it in memory.
+3. The image and your question are sent over HTTPS to the provider you picked.
+4. The answer streams back and is rendered as Markdown in the overlay.
+5. The temporary screenshot file is deleted immediately.
 
 ```mermaid
 flowchart LR
     A["Hotkey<br/>⌥⇧2 / Alt+Shift+2"] --> B["Hide the overlay"]
-    B --> C["Native capture<br/>screencapture / PowerShell"]
-    C --> D["Downscale + JPEG<br/>in Rust, in memory"]
-    D --> E["Multimodal request<br/>to your provider"]
-    E --> F["SSE token stream"]
-    F --> G["Markdown in the overlay"]
-    G --> A
+    B --> C["Capture one frame"]
+    C --> D["Compress in Rust<br/>(no disk left behind)"]
+    D --> E["Send to your provider<br/>over HTTPS"]
+    E --> F["Stream the answer"]
+    F --> G["Render Markdown<br/>in the overlay"]
 ```
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant U as You
-    participant T as TrueHalo (Rust)
-    participant S as System
-    participant P as AI provider
-
-    U->>T: Press capture hotkey
-    T->>S: Hide overlay, grab one frame
-    S-->>T: PNG (local temp file)
-    T->>T: Compress, delete temp file
-    T->>P: POST /chat/completions (image + text)
-    P-->>T: Streaming response
-    T-->>U: Markdown, rendered in the overlay
-```
-
-Platform code is quarantined behind small modules (`overlay`, `capture`, `auth`), so the frontend and
-the streaming core are shared. Native UI calls are marshalled to the main thread, window geometry is
-flushed to SQLite from a background thread, and the overlay is hidden without destroying its window.
+Platform-specific code lives in small modules (`overlay`, `capture`, `auth`), so the UI and the
+streaming core are identical on both systems.
 
 ## Privacy & security
 
-- **Keys** — system credential store (macOS Keychain, Windows Credential Manager). Existence checks
-  read attributes only, so Settings never asks for your login password. A one-click **Fix** in
-  Settings → Screen Recording & Privacy re-binds keys created by older builds.
-- **Never in the WebView** — the React layer can start a request, but it never receives a key. Keys are
-  read by Rust at request time and stay in memory only for that call.
-- **Network** — direct HTTPS to the provider you chose. No proxy, no telemetry, no analytics.
-- **Screen** — captured only after an explicit hotkey, compressed locally, temp file deleted right
-  after it is read. Nothing is recorded continuously.
-- **Overlay** — excluded from other apps' captures; strict CSP; Markdown rendered as text nodes.
+- **API keys** are stored in the system credential store (Keychain on macOS, Credential Manager on
+  Windows). The React UI can ask the backend to start a request, but it never receives the key.
+- **No background capture.** A screenshot is taken only after you press a hotkey, and the temporary
+  file is deleted right after it is read.
+- **No telemetry.** The only network requests are the ones to the AI provider you selected.
+- **Overlay protection** uses the OS feature for hiding windows from screen capture. Your chats stay
+  private even if you share your screen.
+- **Local data**: chats and settings are in a local SQLite database. Nothing is synced anywhere.
 
 ## Troubleshooting
 
-| Symptom | Fix |
+| Problem | Fix |
 |---|---|
-| macOS: “TrueHalo is damaged and can’t be opened” | Run `xattr -dr com.apple.quarantine /Applications/TrueHalo.app`, then open again |
-| macOS: no **Open Anyway** button | Try launching the app once, then reopen Privacy & Security; or use the Terminal command above |
-| Screenshots keep asking for permission | System privacy settings → toggle TrueHalo **off and on** → restart the app |
-| A password prompt appears when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
-| Windows: “Windows protected your PC” | SmartScreen → **More info** → **Run anyway** |
-| Windows: a black rectangle appears in a recording | Capture exclusion needs Windows 10 2004+. On older builds TrueHalo disables the switch instead of blacking the window out |
-| Windows: a protected video captures as black | DRM windows cannot be captured by any screen recorder |
-| Hotkeys do nothing | Another app owns the shortcut; quit it or change the global shortcut |
-| Model list is empty | The provider rejected the key (401/429) — check the key and your quota |
+| macOS: *"TrueHalo is damaged and can't be opened"* | `xattr -dr com.apple.quarantine /Applications/TrueHalo.app`, then open again |
+| macOS: no **Open Anyway** button | Launch the app once, then reopen Privacy & Security; or use the Terminal command above |
+| macOS asks for Screen Recording again after an update | System Settings → Privacy & Security → toggle TrueHalo off and on → restart the app |
+| macOS asks for a password when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
+| Windows: *"Windows protected your PC"* | SmartScreen → **More info** → **Run anyway** |
+| Windows: a black rectangle appears in a recording | Capture exclusion needs Windows 10 2004+; on older builds TrueHalo disables the switch instead of blacking the window out |
+| Windows: a DRM-protected video captures as black | Protected video surfaces cannot be captured by any screen recorder |
+| Hotkeys do nothing | Another app already owns the shortcut — close it or change the shortcut in your system settings |
+| The model list is empty | The provider rejected the key (401/429). Check the key and your quota |
 
-Logs: `~/Library/Logs/TrueHalo/truehalo.log` on macOS.
+Logs on macOS: `~/Library/Logs/TrueHalo/truehalo.log`.
 
 ## Roadmap
 
-- [x] Windows build — Credential Manager, native capture backend, NSIS installer
-- [ ] **Assistant profiles + context injection** — upload files, build a personal knowledge base,
-      answer with your context attached
-- [ ] **Smart token optimization** — lower token spend with the same answer quality
-- [ ] **Major performance optimization** — further reduction of CPU and RAM usage
+Shipped:
+
+- [x] macOS and Windows builds
+- [x] Three providers with a live model catalog
+- [x] Region / full-screen capture with local compression
+- [x] System credential storage and capture exclusion
+
+Next, in order of expected impact:
+
+- [ ] **Assistant profiles with context injection** — upload a résumé, a product brief, a runbook or
+      a few notes, and every answer will use that knowledge. Your context instead of a fixed preset.
+      *Not shipped yet; in design.*
+- [ ] **Smart token optimization** — reuse and deduplicate visual context so requests cost fewer
+      tokens **without lowering answer quality**.
+- [ ] **Major performance optimization** — further reduce CPU and RAM use while capturing and while
+      streaming.
 - [ ] Code signing for both platforms (Apple Developer ID, Authenticode)
-- [ ] Optional click-through mode
+- [ ] Click-through mode
 - [ ] Local models via Ollama
 
 ## Tech stack
@@ -291,19 +282,6 @@ Logs: `~/Library/Logs/TrueHalo/truehalo.log` on macOS.
 | Credentials | macOS Keychain · Windows Credential Manager |
 | Window | AppKit on macOS · Win32 / DWM on Windows |
 
-```text
-src/                  React UI (chat, providers, capture, settings)
-src-tauri/src/
-├── ai/               provider clients (OpenRouter, Gemini, OpenAI) + SSE streaming
-├── auth/             credential storage (Keychain / Credential Manager)
-├── capture/          capture backends, compression, permission handling
-├── commands/         typed IPC surface
-├── storage/          SQLite (sessions, messages, preferences)
-├── overlay.rs        safe show/hide/is_visible for the overlay
-└── macos.rs          Objective-C runtime helpers (macOS backend)
-scripts/              build, signing and packaging
-```
-
 ## Build from source
 
 macOS:
@@ -313,16 +291,16 @@ git clone https://github.com/Neksand/TrueHalo.git
 cd TrueHalo
 npm install
 
-# One-time: stable local signing identity (keeps screen recording across rebuilds)
+# One-time: create a stable local signing identity, so macOS keeps the
+# Screen Recording permission across rebuilds.
 npm run sign:setup
 
-# Build, sign and install
-npm run app:install
+npm run app:install        # build, sign, install to /Applications and launch
 ```
 
-Prerequisites: Xcode Command Line Tools (`xcode-select --install`), Node.js 18+, Rust stable.
+You need Xcode Command Line Tools (`xcode-select --install`), Node.js 18+ and Rust stable.
 
-Windows (PowerShell, MSVC toolchain + Visual Studio Build Tools):
+Windows (PowerShell; install the Rust MSVC toolchain and Visual Studio Build Tools first):
 
 ```powershell
 git clone https://github.com/Neksand/TrueHalo.git
@@ -331,22 +309,24 @@ npm install
 npm run tauri build -- --bundles nsis
 ```
 
-Development loop:
+The installer appears in `src-tauri/target/release/bundle/nsis/`.
+
+Development:
 
 ```bash
 npm run tauri dev     # hot reload
-npm run build         # type-check + production frontend
+npm run build         # type-check the frontend
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-> `npm run tauri dev` runs an unsigned debug binary, so macOS cannot persist the screen-recording
+> `npm run tauri dev` runs an unsigned debug binary, so macOS cannot keep the Screen Recording
 > permission for it. Test capture with the signed `/Applications` build.
 
 ## Credits
 
 - Inspired by **[Cheating Daddy](https://github.com/sohzm/cheating-daddy)** by
   [@sohzm](https://github.com/sohzm). TrueHalo is an independent implementation and shares no code
-  with it; the comparison above reflects its public README.
+  with it; the comparison above is based on its public README.
 - Built with [Tauri](https://tauri.app), [React](https://react.dev) and
   [Tailwind CSS](https://tailwindcss.com).
 
