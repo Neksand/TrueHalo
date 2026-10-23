@@ -126,7 +126,11 @@ export const App: React.FC = () => {
           // Unsupported OS/build (Windows < 10 2004): keep the UI honest.
           setSettings((prev) => ({ ...prev, excludeScreenRecord: false }));
         }
-        await tauriApi.setVibrancy(loaded.vibrancy);
+        const vibrancyApplied = await tauriApi.setVibrancy(loaded.vibrancy);
+        if (loaded.vibrancy && !vibrancyApplied) {
+          // Transparency effects are disabled in Windows settings.
+          setSettings((prev) => ({ ...prev, vibrancy: false }));
+        }
         const dockApplied = await tauriApi.setHideFromDock(loaded.hideFromDock);
         if (loaded.hideFromDock && !dockApplied) {
           // Accessory mode is macOS-only.
@@ -189,7 +193,8 @@ export const App: React.FC = () => {
 
   const handleToggleVibrancy = async (val: boolean) => {
     updateSettings({ vibrancy: val });
-    await tauriApi.setVibrancy(val);
+    const applied = await tauriApi.setVibrancy(val);
+    if (val && !applied) updateSettings({ vibrancy: false });
   };
 
   const handleToggleHideFromDock = async (val: boolean) => {
