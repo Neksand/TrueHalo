@@ -6,8 +6,10 @@
  * glyphs the user sees on their keyboard, so labels are platform-aware.
  */
 
-const isWindows =
+export const IS_WINDOWS =
   typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent);
+
+const isWindows = IS_WINDOWS;
 
 export const HOTKEYS = {
   /** Compact form for inline hints: "⌥Space" / "Alt+Space". */

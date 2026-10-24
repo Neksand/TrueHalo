@@ -103,7 +103,9 @@ window. TrueHalo is written in Rust and uses the WebView that your operating sys
 - **Real transparency** — the opacity slider (5–100 %) changes the actual window alpha.
 - **Optional frosted glass** on top of the transparency, for readability.
 - **Invisible to screen recorders** — OBS, Zoom and QuickTime do not see the overlay at all
-  (`NSWindowSharingNone` on macOS, `WDA_EXCLUDEFROMCAPTURE` on Windows 10 2004+).
+  (`NSWindowSharingNone` on macOS, `WDA_EXCLUDEFROMCAPTURE` on Windows 10 2004+). On Windows the
+  overlay turns fully opaque while protection is on, so the recorded area shows the desktop instead
+  of a black box; transparency and glass return when you switch protection off.
 - **Tray mode** — hide TrueHalo from the Dock or taskbar and control it from the menu bar / tray.
 - **Remembers its place** — position, size and settings are stored locally in SQLite.
 - **No telemetry, no accounts, no analytics.**
@@ -242,7 +244,7 @@ streaming core are identical on both systems.
 | macOS asks for Screen Recording again after an update | System Settings → Privacy & Security → toggle TrueHalo off and on → restart the app |
 | macOS asks for a password when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
 | Windows: *"Windows protected your PC"* | SmartScreen → **More info** → **Run anyway** |
-| Windows: a black rectangle appears in a recording | Capture exclusion needs Windows 10 2004+; on older builds TrueHalo disables the switch instead of blacking the window out |
+| Windows: a black box appears where the overlay was | Keep **Hide the window from other screen recordings** on — the overlay then stays fully opaque. Older builds (< Windows 10 2004) cannot exclude a window at all, so the switch stays off |
 | Windows: a DRM-protected video captures as black | Protected video surfaces cannot be captured by any screen recorder |
 | Hotkeys do nothing | Another app already owns the shortcut — close it or change the shortcut in your system settings |
 | The model list is empty | The provider rejected the key (401/429). Check the key and your quota |

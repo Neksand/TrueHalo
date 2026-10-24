@@ -151,6 +151,11 @@ pub fn set_screen_recording_protection(app: AppHandle, exclude: bool) -> Result<
 /// paints a black rectangle over the content underneath. We therefore check the
 /// build first and simply leave the window untouched when exclusion is not
 /// available, instead of producing that black box.
+///
+/// Acrylic blur and the DWM shadow are composited outside the window surface,
+/// so they are not covered by the exclusion and can leave a dark rectangle in
+/// the recording ("a piece of the screen is missing"). Both are dropped while
+/// protection is on and restored by the frontend when it is turned off.
 #[cfg(windows)]
 fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, String> {
     const MIN_BUILD_FOR_EXCLUSION: u32 = 19_041;
@@ -172,6 +177,15 @@ fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, Strin
 
     match window.set_content_protected(exclude) {
         Ok(()) => {
+            if exclude {
+                // Blur-behind samples the desktop and the shadow is a separate
+                // DWM visual: neither is excluded from the capture, so they
+                // would show up as a dark hole over the desktop.
+                let _ = window_vibrancy::clear_acrylic(&window);
+                let _ = window.set_shadow(false);
+            } else {
+                let _ = window.set_shadow(true);
+            }
             tracing::info!(
                 "Windows display affinity: exclude={} (build {})",
                 exclude,

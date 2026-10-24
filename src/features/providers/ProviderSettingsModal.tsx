@@ -8,6 +8,7 @@ import {
   ScreenCaptureStatus,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
+import { IS_WINDOWS } from "../../lib/hotkeys";
 import {
   Key,
   Shield,
@@ -479,6 +480,17 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
               </p>
             </div>
 
+            {IS_WINDOWS && settings.excludeScreenRecord && (
+              <div className="p-3 rounded-lg bg-amber-950/20 border border-amber-900/40 text-[11px] text-amber-200/80 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  Screen-recording protection is on. Windows needs an opaque window to
+                  avoid leaving a black box in recordings, so opacity and frosted glass
+                  apply again once you turn protection off.
+                </span>
+              </div>
+            )}
+
             <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/30 space-y-4">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-slate-200">Interface opacity:</span>
@@ -747,6 +759,12 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                     macOS 13+ or Windows 10 2004+. On older Windows builds the
                     window stays visible in recordings.
                   </p>
+                  {IS_WINDOWS && settings.excludeScreenRecord && (
+                    <p className="text-[10px] text-amber-300/80 mt-1 max-w-md leading-relaxed">
+                      Windows: the overlay stays fully opaque while this is on.
+                      Transparency and frosted glass come back when you turn it off.
+                    </p>
+                  )}
                 </div>
 
                 <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">

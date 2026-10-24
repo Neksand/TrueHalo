@@ -9,6 +9,7 @@ import {
   ScreenCaptureStatus,
 } from "./lib/types";
 import { tauriApi } from "./lib/tauri";
+import { IS_WINDOWS } from "./lib/hotkeys";
 
 const PREF_KEYS: Record<keyof AppSettings, string> = {
   windowOpacity: "window_opacity",
@@ -126,11 +127,6 @@ export const App: React.FC = () => {
           // Unsupported OS/build (Windows < 10 2004): keep the UI honest.
           setSettings((prev) => ({ ...prev, excludeScreenRecord: false }));
         }
-        const vibrancyApplied = await tauriApi.setVibrancy(loaded.vibrancy);
-        if (loaded.vibrancy && !vibrancyApplied) {
-          // Transparency effects are disabled in Windows settings.
-          setSettings((prev) => ({ ...prev, vibrancy: false }));
-        }
         const dockApplied = await tauriApi.setHideFromDock(loaded.hideFromDock);
         if (loaded.hideFromDock && !dockApplied) {
           // Accessory mode is macOS-only.
@@ -154,10 +150,34 @@ export const App: React.FC = () => {
     })();
   }, [refreshPermission]);
 
+  // Windows cannot hide a translucent window from capture without leaving a
+  // black rectangle where the window used to be: the excluded region inherits
+  // the window's alpha. While protection is on, the overlay therefore stays
+  // fully opaque; macOS has no such limitation.
+  const protectionForcesOpaque = IS_WINDOWS && settings.excludeScreenRecord;
+  const effectiveOpacity = protectionForcesOpaque ? 1 : settings.windowOpacity;
+  const effectiveVibrancy = settings.vibrancy && !protectionForcesOpaque;
+
   // Keep the transparent window opacity in a CSS variable (no re-render cost).
   useEffect(() => {
-    document.documentElement.style.setProperty("--window-opacity", String(settings.windowOpacity));
-  }, [settings.windowOpacity]);
+    document.documentElement.style.setProperty("--window-opacity", String(effectiveOpacity));
+  }, [effectiveOpacity]);
+
+  // Apply the native backdrop material whenever the effective state changes
+  // (user toggle, capture protection, or restored preferences).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const applied = await tauriApi.setVibrancy(effectiveVibrancy);
+      if (!cancelled && effectiveVibrancy && !applied) {
+        // Transparency effects are disabled in Windows settings.
+        setSettings((prev) => ({ ...prev, vibrancy: false }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveVibrancy]);
 
   // Re-check permission whenever the window regains focus (user came back
   // from System Settings).
@@ -191,10 +211,10 @@ export const App: React.FC = () => {
 
   const handleChangeOpacity = (val: number) => updateSettings({ windowOpacity: val });
 
-  const handleToggleVibrancy = async (val: boolean) => {
+  // The effect above applies the material natively and reverts unsupported
+  // requests, so the handler only stores the preference.
+  const handleToggleVibrancy = (val: boolean) => {
     updateSettings({ vibrancy: val });
-    const applied = await tauriApi.setVibrancy(val);
-    if (val && !applied) updateSettings({ vibrancy: false });
   };
 
   const handleToggleHideFromDock = async (val: boolean) => {
