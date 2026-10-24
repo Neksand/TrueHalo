@@ -8,8 +8,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Windows: recording protection no longer leaves a black rectangle where the overlay was. While
-  protection is on the window becomes fully opaque and drops acrylic blur and its DWM shadow (both
-  are composited outside the excluded surface); transparency and glass are restored when it is off.
+  protection is on the window becomes fully opaque and drops the DWM transparency composition,
+  acrylic blur and the window shadow — all of them are composited outside the excluded surface and
+  were painted as a hole in the capture. Transparency and glass are restored when it is off.
 
 ### Changed
 - Windows: hotkey hints now show `Alt+Space`, `Alt+Shift+2` and `Alt+Shift+3` instead of the

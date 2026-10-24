@@ -177,6 +177,14 @@ fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, Strin
 
     match window.set_content_protected(exclude) {
         Ok(()) => {
+            // tao creates transparent windows with DWM blur-behind over an empty
+            // region. That composition is not part of the window surface, so the
+            // capture still receives the window's alpha and paints a black hole
+            // where it was. Turn the OS-level transparency off while protection
+            // is on (the UI is forced opaque anyway) and restore it afterwards.
+            if let Ok(hwnd) = window.hwnd() {
+                set_dwm_transparency(hwnd.0 as isize, !exclude);
+            }
             if exclude {
                 // Blur-behind samples the desktop and the shadow is a separate
                 // DWM visual: neither is excluded from the capture, so they
@@ -222,6 +230,75 @@ fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, Strin
         }
     }
     Ok(false)
+}
+
+/// Toggle the DWM blur-behind composition that makes a tao window transparent.
+///
+/// With `transparent: false` the window stops contributing per-pixel alpha to
+/// the desktop composition, which is what keeps `WDA_EXCLUDEFROMCAPTURE` from
+/// leaving a black rectangle in recordings. Re-enabling it restores exactly the
+/// state tao sets up at creation (an empty blur region).
+#[cfg(windows)]
+fn set_dwm_transparency(hwnd: isize, transparent: bool) {
+    #[repr(C)]
+    struct BlurBehind {
+        flags: u32,
+        enable: i32,
+        blur_region: *mut std::ffi::c_void,
+        transition_on_maximized: i32,
+    }
+
+    const DWM_BB_ENABLE: u32 = 0x1;
+    const DWM_BB_BLURREGION: u32 = 0x2;
+
+    #[link(name = "dwmapi")]
+    extern "system" {
+        fn DwmEnableBlurBehindWindow(
+            hwnd: *mut std::ffi::c_void,
+            blur_behind: *const BlurBehind,
+        ) -> i32;
+    }
+
+    #[link(name = "gdi32")]
+    extern "system" {
+        fn CreateRectRgn(left: i32, top: i32, right: i32, bottom: i32) -> *mut std::ffi::c_void;
+        fn DeleteObject(object: *mut std::ffi::c_void) -> i32;
+    }
+
+    let hwnd = hwnd as *mut std::ffi::c_void;
+
+    let result = unsafe {
+        if transparent {
+            let region = CreateRectRgn(0, 0, -1, -1);
+            let blur = BlurBehind {
+                flags: DWM_BB_ENABLE | DWM_BB_BLURREGION,
+                enable: 1,
+                blur_region: region,
+                transition_on_maximized: 0,
+            };
+            let result = DwmEnableBlurBehindWindow(hwnd, &blur);
+            if !region.is_null() {
+                let _ = DeleteObject(region);
+            }
+            result
+        } else {
+            let blur = BlurBehind {
+                flags: DWM_BB_ENABLE,
+                enable: 0,
+                blur_region: std::ptr::null_mut(),
+                transition_on_maximized: 0,
+            };
+            DwmEnableBlurBehindWindow(hwnd, &blur)
+        }
+    };
+
+    if result < 0 {
+        tracing::warn!(
+            "DwmEnableBlurBehindWindow failed (transparent={}): 0x{:08x}",
+            transparent,
+            result
+        );
+    }
 }
 
 /// Real Windows build number, unaffected by the app compatibility manifest.
