@@ -25,6 +25,17 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Major CPU and memory reduction
 - Optional click-through mode
 
+## [0.1.1] — 2026-10-25
+
+### Changed
+- Light optimization and clean-up: `clippy`, `tsc`, `eslint`, cargo tests — all green.
+- Version bumped to 0.1.1 in `package.json`, `Cargo.toml`, `tauri.conf.json`.
+- All fixes from the 0.1.0 follow-up releases (DWM transparency, hotkey labels, accessory/vibrancy revert) rolled into the new tag.
+
+### Added
+- README now includes the 37-second launch film (animated preview + MP4 link).
+- Settings explain the Windows opacity/glass trade-off when screen-recording protection is enabled.
+
 ## [0.1.0] — 2026-10-20
 
 First public release.
@@ -60,5 +71,6 @@ First public release.
 - Duplicate hotkey listeners no longer trigger two parallel captures.
 - API key status checks no longer raise the macOS login-password dialog.
 
-[Unreleased]: https://github.com/Neksand/TrueHalo/compare/v0.1.0...HEAD
+[0.1.1]: https://github.com/Neksand/TrueHalo/releases/tag/v0.1.1
 [0.1.0]: https://github.com/Neksand/TrueHalo/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Neksand/TrueHalo/compare/v0.1.1...HEAD
