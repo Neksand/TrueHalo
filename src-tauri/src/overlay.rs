@@ -12,6 +12,8 @@
 //!   from the main thread" (SIGTRAP). Every call is therefore marshalled to the
 //!   main thread.
 
+#[cfg(windows)]
+use crate::app_state::AppState;
 use std::sync::atomic::{AtomicBool, Ordering};
 #[cfg(target_os = "macos")]
 use std::time::Duration;
@@ -92,6 +94,18 @@ pub fn show(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.show();
         let _ = window.set_focus();
+        // Re-apply native capture protection after showing the window so that
+        // tao does not reset DWM transparency / shadow / acrylic back to defaults.
+        #[cfg(windows)]
+        {
+            if let Some(state) = app.try_state::<AppState>() {
+                let state_guard = state.db.get_preference("exclude_screen_recording");
+                let exclude = state_guard.ok().flatten().map(|v| v == "true").unwrap_or(true);
+                if exclude {
+                    let _ = crate::commands::window_commands::apply_capture_exclusion(app, true);
+                }
+            }
+        }
     }
 }
 

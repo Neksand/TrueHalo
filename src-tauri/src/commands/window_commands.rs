@@ -157,7 +157,7 @@ pub fn set_screen_recording_protection(app: AppHandle, exclude: bool) -> Result<
 /// the recording ("a piece of the screen is missing"). Both are dropped while
 /// protection is on and restored by the frontend when it is turned off.
 #[cfg(windows)]
-fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, String> {
+pub fn apply_capture_exclusion(app: &AppHandle, exclude: bool) -> Result<bool, String> {
     const MIN_BUILD_FOR_EXCLUSION: u32 = 19_041;
 
     let build = windows_build_number();

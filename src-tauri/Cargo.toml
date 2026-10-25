@@ -1,6 +1,6 @@
 [package]
 name = "truehalo"
-version = "0.1.1"
+version = "0.1.2"
 description = "Native, privacy-first AI screen overlay for desktop"
 authors = ["TrueHalo contributors"]
 edition = "2021"
