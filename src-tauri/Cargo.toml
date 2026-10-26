@@ -34,6 +34,7 @@ uuid = { version = "1.11", features = ["v4"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 window-vibrancy = "0.8"
+open = "5"
 
 [features]
 default = ["custom-protocol"]

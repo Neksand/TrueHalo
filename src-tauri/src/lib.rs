@@ -9,7 +9,7 @@ pub mod overlay;
 pub mod storage;
 
 use app_state::AppState;
-use commands::{ai_commands, auth_commands, capture_commands, storage_commands, window_commands};
+use commands::{ai_commands, auth_commands, capture_commands, storage_commands, system_commands, window_commands};
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 use storage::db::DatabaseManager;
@@ -317,6 +317,8 @@ pub fn run() {
             capture_commands::request_screen_capture_permission,
             capture_commands::open_screen_capture_settings,
             capture_commands::restart_app,
+            // System
+            system_commands::open_external,
             // SQLite Storage & Preferences
             storage_commands::list_sessions,
             storage_commands::create_session,

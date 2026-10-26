@@ -161,8 +161,12 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     }
   };
 
-  const handleOpenExternal = (url: string) => {
-    window.open(url, "_blank");
+  const handleOpenExternal = async (url: string) => {
+    try {
+      await tauriApi.openExternal(url);
+    } catch {
+      setMessage({ type: "error", text: "Could not open the link in your browser" });
+    }
   };
 
   if (!isOpen) return null;
@@ -278,12 +282,14 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                       onClick={() => handleOpenExternal(currentProviderInfo.loginUrl || currentProviderInfo.docsUrl)}
                       className="flex items-center gap-1 text-[11px] text-sky-300 hover:text-sky-100 bg-sky-900/40 hover:bg-sky-800/60 px-2.5 py-1 rounded-lg border border-sky-700/50 transition-colors"
                     >
-                      <span>Sign in to OpenAI</span>
+                      <span>Open OpenAI API keys</span>
                       <ExternalLink className="w-3 h-3" />
                     </button>
                   </div>
                   <p className="text-slate-400 text-[11px] leading-relaxed">
-                    Click “Sign in to OpenAI” to authorise in your browser with your ChatGPT account (Google/Apple/Email). On the keys page that opens, click <b>Create new secret key</b> and paste it below. The key is stored in the system keychain permanently.
+                    The button opens the OpenAI sign-in and API keys page in your browser. OpenAI does not
+                    offer account OAuth to third-party apps, so sign in there, click <b>Create new secret
+                    key</b> and paste it below. The key is stored in the system credential store.
                   </p>
                 </div>
               )}

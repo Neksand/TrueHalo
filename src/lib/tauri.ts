@@ -166,6 +166,11 @@ export const tauriApi = {
     return await invoke<boolean>("set_screen_recording_protection", { exclude });
   },
 
+  // System
+  async openExternal(url: string): Promise<void> {
+    await invoke("open_external", { url });
+  },
+
   // Hotkey events
   async onHotkey(event: string, callback: () => void): Promise<UnlistenFn> {
     return await listen(event, () => callback());
