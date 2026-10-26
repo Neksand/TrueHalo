@@ -99,6 +99,18 @@ export const tauriApi = {
     return await invoke<SessionRecord[]>("list_sessions");
   },
 
+  async searchSessions(query: string): Promise<SessionRecord[]> {
+    return await invoke<SessionRecord[]>("search_sessions", { query });
+  },
+
+  async renameSession(sessionId: string, title: string): Promise<void> {
+    await invoke("rename_session", { sessionId, title });
+  },
+
+  async saveExport(filename: string, content: string): Promise<string> {
+    return await invoke<string>("save_export", { filename, content });
+  },
+
   async createSession(
     id: string,
     title: string,

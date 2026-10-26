@@ -304,6 +304,9 @@ pub fn run() {
             system_commands::set_hotkeys,
             // SQLite Storage & Preferences
             storage_commands::list_sessions,
+            storage_commands::search_sessions,
+            storage_commands::rename_session,
+            storage_commands::save_export,
             storage_commands::create_session,
             storage_commands::get_session_messages,
             storage_commands::save_message,

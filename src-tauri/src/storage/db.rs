@@ -136,8 +136,45 @@ impl DatabaseManager {
         Ok(sessions)
     }
 
-    pub fn save_message(
-        &self,
+    pub fn rename_session(&self, session_id: &str, title: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "UPDATE sessions SET title = ?1, updated_at = ?2 WHERE id = ?3",
+            params![title, chrono_now(), session_id],
+        )?;
+        Ok(())
+    }
+
+    /// Search session titles and message text.
+    pub fn search_sessions(&self, query: &str) -> Result<Vec<SessionRecord>> {
+        let conn = self.conn.lock().unwrap();
+        let pattern = format!("%{}%", query.trim());
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT s.id, s.title, s.provider, s.model, s.created_at, s.updated_at
+             FROM sessions s
+             LEFT JOIN messages m ON m.session_id = s.id
+             WHERE s.title LIKE ?1 OR m.content_json LIKE ?1
+             ORDER BY s.updated_at DESC",
+        )?;
+
+        let sessions = stmt
+            .query_map(params![pattern], |row| {
+                Ok(SessionRecord {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    provider: row.get(2)?,
+                    model: row.get(3)?,
+                    created_at: row.get(4)?,
+                    updated_at: row.get(5)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(sessions)
+    }
+
+    pub fn save_message(        &self,
         id: &str,
         session_id: &str,
         role: &str,
@@ -266,5 +303,34 @@ mod tests {
         db.delete_session("sess-1").unwrap();
         let remaining = db.list_sessions().unwrap();
         assert_eq!(remaining.len(), 0);
+    }
+
+    #[test]
+    fn test_rename_and_search_sessions() {
+        let db = DatabaseManager::new_in_memory().unwrap();
+        db.create_session("sess-1", "Rust question", "openrouter", "model-a")
+            .unwrap();
+        db.create_session("sess-2", "Unrelated", "openai", "model-b")
+            .unwrap();
+        db.save_message(
+            "msg-1",
+            "sess-1",
+            "user",
+            r#"[{"type":"text","text":"explain the borrow checker"}]"#,
+        )
+        .unwrap();
+
+        let by_title = db.search_sessions("Rust").unwrap();
+        assert_eq!(by_title.len(), 1);
+        assert_eq!(by_title[0].id, "sess-1");
+
+        let by_message = db.search_sessions("borrow").unwrap();
+        assert_eq!(by_message.len(), 1);
+        assert_eq!(by_message[0].id, "sess-1");
+
+        db.rename_session("sess-2", "Renamed chat").unwrap();
+        let sessions = db.list_sessions().unwrap();
+        let renamed = sessions.iter().find(|s| s.id == "sess-2").unwrap();
+        assert_eq!(renamed.title, "Renamed chat");
     }
 }

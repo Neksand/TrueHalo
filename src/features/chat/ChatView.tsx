@@ -31,6 +31,10 @@ import {
   ShieldAlert,
   Trash2,
   MessageSquare,
+  Search,
+  Pencil,
+  FileText,
+  FileJson,
 } from "lucide-react";
 import logoImg from "../../assets/logo.png";
 
@@ -79,6 +83,19 @@ const stripOlderImages = (messages: ChatMessage[]): ChatMessage[] => {
   });
 };
 
+const contentToText = (contentJson: string): string => {
+  try {
+    const parts = JSON.parse(contentJson) as ContentPart[];
+    return parts
+      .map((part) => (part.type === "text" ? part.text ?? "" : "[image]"))
+      .join("\n");
+  } catch {
+    return contentJson;
+  }
+};
+
+const exportTimestamp = (value: number): string => new Date(value).toLocaleString();
+
 export const ChatView: React.FC<ChatViewProps> = ({
   activeProvider,
   activeModel,
@@ -109,6 +126,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [currentStreamId, setCurrentStreamId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [toast, setToast] = useState<{ text: string; detail?: string } | null>(null);
 
   const [isCapturing, setIsCapturing] = useState(false);
   const [attachedImage, setAttachedImage] = useState<{
@@ -125,20 +146,33 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const renameCancelledRef = useRef(false);
 
-  // Load past sessions from SQLite on mount
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  const loadSessions = async () => {
+  const loadSessions = useCallback(async (query: string) => {
     try {
-      const list = await tauriApi.listSessions();
+      const list = query.trim()
+        ? await tauriApi.searchSessions(query)
+        : await tauriApi.listSessions();
       setSessions(list);
     } catch (e) {
       console.warn("Failed to load sessions from SQLite:", e);
     }
-  };
+  }, []);
+
+  // Search both titles and message text, debounced so typing stays smooth.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadSessions(searchQuery);
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery, loadSessions]);
+
+  // Auto-dismiss export confirmations.
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const handleCapture = useCallback(
     async (interactive: boolean) => {
@@ -296,6 +330,83 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
+  const handleRenameStart = (e: React.MouseEvent, session: SessionRecord) => {
+    e.stopPropagation();
+    setRenamingId(session.id);
+    setRenameValue(session.title);
+  };
+
+  const handleRenameCommit = async (sessionId: string) => {
+    const title = renameValue.trim();
+    setRenamingId(null);
+    if (!title) return;
+    try {
+      await tauriApi.renameSession(sessionId, title);
+      await loadSessions(searchQuery);
+    } catch (err) {
+      setErrorMessage(
+        typeof err === "string" ? err : "Could not rename the conversation",
+      );
+    }
+  };
+
+  const handleExport = async (
+    e: React.MouseEvent,
+    session: SessionRecord,
+    format: "md" | "json",
+  ) => {
+    e.stopPropagation();
+    try {
+      const records = await tauriApi.getSessionMessages(session.id);
+      const rows = records.map((record) => ({
+        role: record.role,
+        timestamp: record.timestamp,
+        text: contentToText(record.content_json),
+      }));
+
+      let content: string;
+      let filename: string;
+
+      if (format === "json") {
+        content = JSON.stringify(
+          {
+            title: session.title,
+            provider: session.provider,
+            model: session.model,
+            createdAt: new Date(session.created_at).toISOString(),
+            messages: rows.map((row) => ({
+              role: row.role,
+              timestamp: new Date(row.timestamp).toISOString(),
+              text: row.text,
+            })),
+          },
+          null,
+          2,
+        );
+        filename = `${session.title}.json`;
+      } else {
+        const header = `# ${session.title}\n\n- Provider: ${session.provider}\n- Model: ${session.model}\n- Created: ${exportTimestamp(session.created_at)}\n\n---\n\n`;
+        const body = rows
+          .map(
+            (row) =>
+              `## ${row.role === "user" ? "User" : "Assistant"} · ${exportTimestamp(
+                row.timestamp,
+              )}\n\n${row.text}\n`,
+          )
+          .join("\n---\n\n");
+        content = header + body;
+        filename = `${session.title}.md`;
+      }
+
+      const path = await tauriApi.saveExport(filename, content);
+      setToast({ text: "Export saved", detail: path });
+    } catch (err) {
+      setErrorMessage(
+        typeof err === "string" ? err : "Could not export the conversation",
+      );
+    }
+  };
+
   const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
@@ -303,7 +414,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       if (sessionId === currentSessionId) {
         handleNewChat();
       }
-      await loadSessions();
+      await loadSessions(searchQuery);
     } catch (err) {
       console.error(err);
     }
@@ -353,7 +464,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       const title = trimmed.slice(0, 32) || "Screen Analysis";
       try {
         await tauriApi.createSession(currentSessionId, title, activeProvider, activeModel);
-        loadSessions();
+        loadSessions(searchQuery);
       } catch (e) {
         console.warn("Could not create session in SQLite:", e);
       }
@@ -552,7 +663,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </button>
           </div>
 
-          <div className="p-2">
+          <div className="p-2 space-y-2">
             <button
               onClick={() => {
                 handleNewChat();
@@ -563,39 +674,131 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <PlusCircle className="w-3.5 h-3.5 text-halo-accent" />
               <span>New Conversation</span>
             </button>
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search history"
+                className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-surface-deep border border-surface-border text-[11px] text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-halo-accent/50"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] px-1"
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex-1 overflow-y-auto px-2 space-y-1">
             {sessions.length === 0 ? (
               <div className="p-4 text-center text-xs text-slate-500">
-                No past conversations.
+                {searchQuery
+                  ? `No matches for “${searchQuery}”.`
+                  : "No past conversations yet. Your next capture starts one."}
               </div>
             ) : (
               sessions.map((s) => (
                 <div
                   key={s.id}
                   onClick={() => handleSelectSession(s)}
-                  className={`group p-2 rounded-lg text-xs cursor-pointer flex items-center justify-between transition-colors ${
+                  className={`group p-2 rounded-lg text-xs cursor-pointer flex items-center justify-between gap-1 transition-colors ${
                     s.id === currentSessionId
                       ? "bg-halo-accent/15 text-slate-100 border border-halo-accent/40"
                       : "text-slate-400 hover:text-slate-200 hover:bg-surface-subtle"
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <MessageSquare className="w-3.5 h-3.5 shrink-0 opacity-70" />
-                    <span className="truncate">{s.title}</span>
+                    {renamingId === s.id ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            e.currentTarget.blur();
+                          }
+                          if (e.key === "Escape") {
+                            renameCancelledRef.current = true;
+                            setRenamingId(null);
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        onBlur={() => {
+                          if (renameCancelledRef.current) {
+                            renameCancelledRef.current = false;
+                            return;
+                          }
+                          void handleRenameCommit(s.id);
+                        }}
+                        className="w-full min-w-0 bg-surface-deep border border-halo-accent/40 rounded px-1.5 py-0.5 text-[11px] text-slate-100 focus:outline-none"
+                      />
+                    ) : (
+                      <span className="truncate" title={s.title}>
+                        {s.title}
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={(e) => handleDeleteSession(e, s.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-400 transition-opacity"
-                    title="Delete conversation"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
+
+                  <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => handleRenameStart(e, s)}
+                      className="p-1 hover:text-halo-accent transition-colors"
+                      title="Rename conversation"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => handleExport(e, s, "md")}
+                      className="p-1 hover:text-sky-300 transition-colors"
+                      title="Export as Markdown"
+                    >
+                      <FileText className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => handleExport(e, s, "json")}
+                      className="p-1 hover:text-sky-300 transition-colors"
+                      title="Export as JSON"
+                    >
+                      <FileJson className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteSession(e, s.id)}
+                      className="p-1 hover:text-rose-400 transition-colors"
+                      title="Delete conversation"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
           </div>
+
+          {toast && (
+            <div className="m-2 p-2 rounded-lg border border-emerald-800/40 bg-emerald-950/30">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-200">
+                <Check className="w-3 h-3" />
+                {toast.text}
+              </div>
+              {toast.detail && (
+                <div
+                  className="text-[10px] text-emerald-200/60 break-all mt-1"
+                  title={toast.detail}
+                >
+                  {toast.detail}
+                </div>
+              )}
+            </div>
+          )}
         </aside>
       )}
 
@@ -708,14 +911,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 Fast AI overlay companion. Press <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">{hotkeys.toggle}</kbd> to toggle, or capture screens with <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">{hotkeys.region}</kbd>.
               </p>
 
+              <button
+                onClick={() => handleCapture(true)}
+                className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-halo-accent hover:bg-halo-accent/90 text-white text-xs font-semibold shadow-halo transition-colors"
+              >
+                <Crop className="w-4 h-4" />
+                Start with a screenshot
+                <span className="ml-1 px-1.5 py-0.5 rounded bg-white/15 font-mono text-[10px] font-normal">
+                  {hotkeys.region}
+                </span>
+              </button>
+
               <div className="grid grid-cols-1 gap-2 w-full text-left">
-                <button
-                  onClick={() => handleCapture(true)}
-                  className="flex items-center gap-2 p-2.5 rounded-lg border border-surface-border bg-surface-card/60 hover:bg-surface-card hover:border-halo-accent/40 text-xs text-slate-200 transition-all text-left"
-                >
-                  <Crop className="w-4 h-4 text-halo-accent shrink-0" />
-                  <span>Capture selected region and analyze ({hotkeys.region})</span>
-                </button>
                 <button
                   onClick={() => handleCapture(false)}
                   className="flex items-center gap-2 p-2.5 rounded-lg border border-surface-border bg-surface-card/60 hover:bg-surface-card hover:border-halo-accent/40 text-xs text-slate-200 transition-all text-left"
