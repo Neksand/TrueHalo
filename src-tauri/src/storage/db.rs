@@ -21,6 +21,40 @@ pub struct MessageRecord {
     pub role: String,
     pub content_json: String,
     pub timestamp: i64,
+    #[serde(default)]
+    pub usage_json: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UsageTotals {
+    pub prompt_tokens: i64,
+    pub completion_tokens: i64,
+    pub responses: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UsageRow {
+    pub provider: String,
+    pub model: String,
+    pub prompt_tokens: i64,
+    pub completion_tokens: i64,
+    pub responses: i64,
+    pub last_used: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyUsage {
+    pub day: String,
+    pub prompt_tokens: i64,
+    pub completion_tokens: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UsageSummary {
+    pub today: UsageTotals,
+    pub all_time: UsageTotals,
+    pub rows: Vec<UsageRow>,
+    pub daily: Vec<DailyUsage>,
 }
 
 pub struct DatabaseManager {
@@ -72,6 +106,7 @@ impl DatabaseManager {
                 role TEXT NOT NULL,
                 content_json TEXT NOT NULL,
                 timestamp INTEGER NOT NULL,
+                usage_json TEXT,
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
             );
 
@@ -84,6 +119,25 @@ impl DatabaseManager {
             ",
         )
         .context("Failed to initialize SQLite database tables")?;
+
+        // Older databases predate usage tracking. Add the column in place so
+        // existing history survives the upgrade.
+        let has_usage_column = {
+            let mut stmt = conn.prepare("PRAGMA table_info(messages)")?;
+            let mut rows = stmt.query([])?;
+            let mut found = false;
+            while let Some(row) = rows.next()? {
+                let name: String = row.get(1)?;
+                if name == "usage_json" {
+                    found = true;
+                    break;
+                }
+            }
+            found
+        };
+        if !has_usage_column {
+            conn.execute("ALTER TABLE messages ADD COLUMN usage_json TEXT", [])?;
+        }
 
         Ok(())
     }
@@ -174,18 +228,20 @@ impl DatabaseManager {
         Ok(sessions)
     }
 
-    pub fn save_message(        &self,
+    pub fn save_message(
+        &self,
         id: &str,
         session_id: &str,
         role: &str,
         content_json: &str,
+        usage_json: Option<&str>,
     ) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         let now = chrono_now();
 
         conn.execute(
-            "INSERT INTO messages (id, session_id, role, content_json, timestamp) VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![id, session_id, role, content_json, now],
+            "INSERT INTO messages (id, session_id, role, content_json, timestamp, usage_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![id, session_id, role, content_json, now, usage_json],
         )?;
 
         conn.execute(
@@ -199,7 +255,7 @@ impl DatabaseManager {
     pub fn get_session_messages(&self, session_id: &str) -> Result<Vec<MessageRecord>> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
-            "SELECT id, session_id, role, content_json, timestamp FROM messages WHERE session_id = ?1 ORDER BY timestamp ASC",
+            "SELECT id, session_id, role, content_json, timestamp, usage_json FROM messages WHERE session_id = ?1 ORDER BY timestamp ASC",
         )?;
 
         let messages = stmt
@@ -210,6 +266,7 @@ impl DatabaseManager {
                     role: row.get(2)?,
                     content_json: row.get(3)?,
                     timestamp: row.get(4)?,
+                    usage_json: row.get(5)?,
                 })
             })?
             .filter_map(|r| r.ok())
@@ -233,6 +290,92 @@ impl DatabaseManager {
         conn.execute("DELETE FROM messages", [])?;
         conn.execute("DELETE FROM sessions", [])?;
         Ok(())
+    }
+
+    /// Aggregate token usage for the dashboard. Cost is resolved in the UI,
+    /// because only the provider catalogs know their prices.
+    pub fn usage_summary(&self) -> Result<UsageSummary> {
+        let conn = self.conn.lock().unwrap();
+
+        let totals_query = |where_clause: &str| -> Result<UsageTotals> {
+            let sql = format!(
+                "SELECT COALESCE(SUM(CAST(json_extract(usage_json, '$.prompt_tokens') AS INTEGER)), 0),
+                        COALESCE(SUM(CAST(json_extract(usage_json, '$.completion_tokens') AS INTEGER)), 0),
+                        COUNT(*)
+                 FROM messages
+                 WHERE usage_json IS NOT NULL {where_clause}"
+            );
+            let mut stmt = conn.prepare(&sql)?;
+            let totals = stmt.query_row([], |row| {
+                Ok(UsageTotals {
+                    prompt_tokens: row.get(0)?,
+                    completion_tokens: row.get(1)?,
+                    responses: row.get(2)?,
+                })
+            })?;
+            Ok(totals)
+        };
+
+        let today = totals_query(
+            "AND date(timestamp / 1000, 'unixepoch', 'localtime') = date('now', 'localtime')",
+        )?;
+        let all_time = totals_query("")?;
+
+        let mut rows_stmt = conn.prepare(
+            "SELECT COALESCE(json_extract(m.usage_json, '$.provider'), s.provider),
+                    COALESCE(json_extract(m.usage_json, '$.model'), s.model),
+                    COALESCE(SUM(CAST(json_extract(m.usage_json, '$.prompt_tokens') AS INTEGER)), 0),
+                    COALESCE(SUM(CAST(json_extract(m.usage_json, '$.completion_tokens') AS INTEGER)), 0),
+                    COUNT(*),
+                    MAX(m.timestamp)
+             FROM messages m
+             JOIN sessions s ON s.id = m.session_id
+             WHERE m.usage_json IS NOT NULL
+             GROUP BY 1, 2
+             ORDER BY 6 DESC",
+        )?;
+        let rows = rows_stmt
+            .query_map([], |row| {
+                Ok(UsageRow {
+                    provider: row.get(0)?,
+                    model: row.get(1)?,
+                    prompt_tokens: row.get(2)?,
+                    completion_tokens: row.get(3)?,
+                    responses: row.get(4)?,
+                    last_used: row.get(5)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        let mut daily_stmt = conn.prepare(
+            "SELECT date(timestamp / 1000, 'unixepoch', 'localtime') AS day,
+                    COALESCE(SUM(CAST(json_extract(usage_json, '$.prompt_tokens') AS INTEGER)), 0),
+                    COALESCE(SUM(CAST(json_extract(usage_json, '$.completion_tokens') AS INTEGER)), 0)
+             FROM messages
+             WHERE usage_json IS NOT NULL
+             GROUP BY day
+             ORDER BY day DESC
+             LIMIT 7",
+        )?;
+        let mut daily: Vec<DailyUsage> = daily_stmt
+            .query_map([], |row| {
+                Ok(DailyUsage {
+                    day: row.get(0)?,
+                    prompt_tokens: row.get(1)?,
+                    completion_tokens: row.get(2)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        daily.reverse();
+
+        Ok(UsageSummary {
+            today,
+            all_time,
+            rows,
+            daily,
+        })
     }
 
     pub fn set_preference(&self, key: &str, value: &str) -> Result<()> {
@@ -285,6 +428,7 @@ mod tests {
             "sess-1",
             "user",
             r#"[{"type":"text","text":"hello"}]"#,
+            None,
         )
         .unwrap();
         db.save_message(
@@ -292,6 +436,7 @@ mod tests {
             "sess-1",
             "assistant",
             r#"[{"type":"text","text":"hi!"}]"#,
+            Some(r#"{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15,"provider":"openrouter","model":"claude-3.5-sonnet"}"#),
         )
         .unwrap();
 
@@ -299,6 +444,15 @@ mod tests {
         assert_eq!(msgs.len(), 2);
         assert_eq!(msgs[0].role, "user");
         assert_eq!(msgs[1].role, "assistant");
+        assert!(msgs[1].usage_json.is_some());
+
+        let usage = db.usage_summary().unwrap();
+        assert_eq!(usage.all_time.prompt_tokens, 10);
+        assert_eq!(usage.all_time.completion_tokens, 5);
+        assert_eq!(usage.all_time.responses, 1);
+        assert_eq!(usage.today.responses, 1);
+        assert_eq!(usage.rows.len(), 1);
+        assert_eq!(usage.rows[0].model, "claude-3.5-sonnet");
 
         db.delete_session("sess-1").unwrap();
         let remaining = db.list_sessions().unwrap();
@@ -317,6 +471,7 @@ mod tests {
             "sess-1",
             "user",
             r#"[{"type":"text","text":"explain the borrow checker"}]"#,
+            None,
         )
         .unwrap();
 

@@ -11,6 +11,7 @@ import {
   SessionRecord,
   StreamEventPayload,
   TokenUsage,
+  UsageSummary,
 } from "./types";
 
 export const tauriApi = {
@@ -128,9 +129,14 @@ export const tauriApi = {
     id: string,
     sessionId: string,
     role: string,
-    contentJson: string
+    contentJson: string,
+    usageJson?: string
   ): Promise<void> {
-    await invoke("save_message", { id, sessionId, role, contentJson });
+    await invoke("save_message", { id, sessionId, role, contentJson, usageJson });
+  },
+
+  async usageSummary(): Promise<UsageSummary> {
+    return await invoke<UsageSummary>("usage_summary");
   },
 
   async deleteSession(sessionId: string): Promise<void> {

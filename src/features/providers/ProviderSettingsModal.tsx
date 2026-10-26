@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   AppSettings,
   COMPRESSION_PRESETS,
   CompressionPreset,
+  ModelPricing,
   ModelInfo,
   ProviderId,
   QuickAction,
   ScreenCaptureStatus,
+  UsageRow,
+  UsageSummary,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey, IS_WINDOWS } from "../../lib/hotkeys";
@@ -25,6 +28,7 @@ import {
   Sliders,
   MonitorOff,
   CircleGauge,
+  BarChart3,
   Keyboard,
   Zap,
 } from "lucide-react";
@@ -173,6 +177,40 @@ const HotkeyRow: React.FC<{
   </div>
 );
 
+/** `—` means the provider did not report a price for this model. */
+const formatUsd = (value: number | null): string => {
+  if (value === null) return "—";
+  if (value === 0) return "$0.00";
+  if (value < 0.01) return `$${value.toFixed(5)}`;
+  return `$${value.toFixed(4)}`;
+};
+
+const pricePerToken = (value?: string): number | null => {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const usageCost = (
+  promptTokens: number,
+  completionTokens: number,
+  pricing?: ModelPricing | null,
+): number | null => {
+  if (!pricing) return null;
+  const promptPrice = pricePerToken(pricing.prompt);
+  const completionPrice = pricePerToken(pricing.completion);
+  if (promptPrice === null || completionPrice === null) return null;
+  return promptTokens * promptPrice + completionTokens * completionPrice;
+};
+
+const usageDayKey = (ts: number): string => {
+  const date = new Date(ts);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+};
+
+
 export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   isOpen,
   onClose,
@@ -192,7 +230,14 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   customActions,
   onChangeCustomActions,
 }) => {
-  const [activeTab, setActiveTab] = useState<"providers" | "appearance" | "hotkeys" | "actions" | "privacy">("providers");
+  const [activeTab, setActiveTab] = useState<
+    | "providers"
+    | "usage"
+    | "appearance"
+    | "hotkeys"
+    | "actions"
+    | "privacy"
+  >("providers");
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>(activeProvider);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -205,12 +250,61 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   const [actionLabel, setActionLabel] = useState("");
   const [actionPrompt, setActionPrompt] = useState("");
   const [keychainNotice, setKeychainNotice] = useState<string | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [usageError, setUsageError] = useState<string | null>(null);
+  const [modelPrices, setModelPrices] = useState<Record<string, ModelPricing>>({});
 
   useEffect(() => {
     if (isOpen) {
       checkKeyStatus(selectedProvider);
     }
   }, [isOpen, selectedProvider]);
+
+  const loadUsage = useCallback(async () => {
+    try {
+      const summary = await tauriApi.usageSummary();
+      setUsage(summary);
+      setUsageError(null);
+    } catch (e) {
+      setUsageError(typeof e === "string" ? e : "Failed to load usage data");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void loadUsage();
+  }, [isOpen, loadUsage]);
+
+  // Provider catalogs are the only honest source of prices. Models without a
+  // reported price keep their costs unknown ("—") instead of inventing numbers.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    const loadPrices = async () => {
+      const entries: Array<[string, ModelPricing]> = [];
+      const providers: ProviderId[] = ["openrouter", "gemini", "openai"];
+      await Promise.all(
+        providers.map(async (provider) => {
+          try {
+            if (!(await tauriApi.hasApiKey(provider))) return;
+            const models = await tauriApi.listModels(provider);
+            for (const model of models) {
+              if (model.pricing) {
+                entries.push([`${provider}:${model.id}`, model.pricing]);
+              }
+            }
+          } catch {
+            // Missing key or offline catalog: costs stay unknown for this provider.
+          }
+        }),
+      );
+      if (!cancelled) setModelPrices(Object.fromEntries(entries));
+    };
+    void loadPrices();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   const checkKeyStatus = async (provider: ProviderId) => {
     setMessage(null);
@@ -307,6 +401,59 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       m.name.toLowerCase().includes(searchModel.toLowerCase())
   );
 
+  const usageTodayTokens = usage
+    ? usage.today.prompt_tokens + usage.today.completion_tokens
+    : 0;
+  const usageAllTimeTokens = usage
+    ? usage.all_time.prompt_tokens + usage.all_time.completion_tokens
+    : 0;
+
+  const usageRowCost = (row: UsageRow): number | null =>
+    usageCost(
+      row.prompt_tokens,
+      row.completion_tokens,
+      modelPrices[`${row.provider}:${row.model}`],
+    );
+
+  // undefined = usage not loaded yet; null = at least one price is unknown.
+  const usageAllTimeCost = useMemo((): number | null => {
+    if (!usage) return null;
+    let total: number | null = 0;
+    let unknown = false;
+    for (const row of usage.rows) {
+      const cost = usageRowCost(row);
+      if (cost === null) unknown = true;
+      else total += cost;
+    }
+    return unknown ? null : total;
+  }, [usage, modelPrices]);
+
+  const usageTodayCost = useMemo((): number | null => {
+    if (!usage) return null;
+    const todayKey = usageDayKey(Date.now());
+    let total: number | null = 0;
+    let seen = false;
+    let unknown = false;
+    for (const row of usage.rows) {
+      if (usageDayKey(row.last_used) !== todayKey) continue;
+      seen = true;
+      const cost = usageRowCost(row);
+      if (cost === null) unknown = true;
+      else total += cost;
+    }
+    if (!seen) return 0;
+    return unknown ? null : total;
+  }, [usage, modelPrices]);
+
+  const usageMaxDailyTokens = useMemo(
+    () =>
+      usage && usage.daily.length > 0
+        ? Math.max(...usage.daily.map((d) => d.prompt_tokens + d.completion_tokens))
+        : 0,
+    [usage],
+  );
+
+
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
       <div className="bg-surface-card border border-surface-border rounded-xl w-full max-w-3xl max-h-[88vh] flex flex-col shadow-halo overflow-hidden animate-in fade-in zoom-in-95 duration-150">
@@ -344,6 +491,18 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           >
             <Key className="w-3.5 h-3.5" />
             <span>AI Providers &amp; Models</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("usage")}
+            className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+              activeTab === "usage"
+                ? "border-halo-accent text-slate-100"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Usage</span>
           </button>
 
           <button
@@ -632,6 +791,134 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Tab 2: Usage & Cost */}
+        {activeTab === "usage" && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-halo-accent" />
+                  Usage & Cost
+                </h3>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed max-w-md">
+                  Token usage and estimated spend. Prices come from the provider
+                  model catalogs; unknown prices show as “—”, without invented numbers.
+                </p>
+              </div>
+              <button
+                onClick={() => void loadUsage()}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded bg-surface-subtle hover:bg-surface-border transition-colors shrink-0"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Refresh</span>
+              </button>
+            </div>
+
+            {usageError && (
+              <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-800/60 text-xs text-rose-200 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{usageError}</span>
+              </div>
+            )}
+
+            {!usage && !usageError ? (
+              <div className="py-10 text-center text-xs text-slate-400">Loading usage…</div>
+            ) : (
+              usage && (
+                <>
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/40 space-y-1.5">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">Today</span>
+                      <div className="text-xl font-semibold text-slate-100">
+                        {usageTodayTokens.toLocaleString("en-US")}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        tokens ·{" "}
+                        <span className="font-mono text-slate-200">{formatUsd(usageTodayCost)}</span>
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/40 space-y-1.5">
+                      <span className="text-[10px] uppercase tracking-wide text-slate-500 font-medium">
+                        All time
+                      </span>
+                      <div className="text-xl font-semibold text-slate-100">
+                        {usageAllTimeTokens.toLocaleString("en-US")}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        tokens ·{" "}
+                        <span className="font-mono text-slate-200">{formatUsd(usageAllTimeCost)}</span> ·{" "}
+                        {usage.all_time.responses}{" "}
+                        {usage.all_time.responses === 1 ? "response" : "responses"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Per-model usage */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-slate-100">Per model</h3>
+                    {usage.rows.length === 0 ? (
+                      <p className="text-xs text-slate-400">No usage recorded yet.</p>
+                    ) : (
+                      <div className="rounded-xl border border-surface-border bg-surface-subtle/30 divide-y divide-surface-border px-4">
+                        {usage.rows.map((row) => (
+                          <div
+                            key={`${row.provider}:${row.model}`}
+                            className="py-3 flex items-center justify-between gap-4"
+                          >
+                            <div className="min-w-0">
+                              <div className="text-xs font-medium text-slate-200 truncate">{row.model}</div>
+                              <div className="text-[11px] text-slate-500 mt-0.5 truncate">{row.provider}</div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-xs text-slate-300">
+                                {row.responses}{" "}
+                                {row.responses === 1 ? "response" : "responses"} ·{" "}
+                                {(row.prompt_tokens + row.completion_tokens).toLocaleString("en-US")} tok
+                              </div>
+                              <div className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                                {formatUsd(usageRowCost(row))}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Last 7 days mini chart */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-slate-100">Last 7 days</h3>
+                    {usage.daily.length === 0 ? (
+                      <p className="text-xs text-slate-400">No usage recorded yet.</p>
+                    ) : (
+                      <div className="h-28 rounded-xl border border-surface-border bg-surface-subtle/30 p-3 flex items-end gap-1.5">
+                        {usage.daily.map((d) => {
+                          const tokens = d.prompt_tokens + d.completion_tokens;
+                          const barHeight =
+                            usageMaxDailyTokens > 0
+                              ? Math.max((tokens / usageMaxDailyTokens) * 100, tokens > 0 ? 3 : 0)
+                              : 0;
+                          return (
+                            <div key={d.day} className="flex-1 h-full flex flex-col justify-end items-center gap-1">
+                              <div
+                                className="w-full rounded-t-sm bg-halo-accent/70"
+                                style={{ height: `${barHeight}%` }}
+                                title={`${d.day}: ${tokens.toLocaleString("en-US")} tokens`}
+                              />
+                              <span className="text-[9px] text-slate-500 font-mono">{d.day.slice(5)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )
+            )}
           </div>
         )}
 

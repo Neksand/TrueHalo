@@ -311,6 +311,7 @@ pub fn run() {
             storage_commands::create_session,
             storage_commands::get_session_messages,
             storage_commands::save_message,
+            storage_commands::usage_summary,
             storage_commands::delete_session,
             storage_commands::clear_all_history,
             storage_commands::set_preference,

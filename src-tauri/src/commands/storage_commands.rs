@@ -69,11 +69,17 @@ pub fn save_message(
     session_id: String,
     role: String,
     content_json: String,
+    usage_json: Option<String>,
 ) -> Result<(), String> {
     state
         .db
-        .save_message(&id, &session_id, &role, &content_json)
+        .save_message(&id, &session_id, &role, &content_json, usage_json.as_deref())
         .map_err(|e| e.to_string())
+}
+
+#[command]
+pub fn usage_summary(state: State<'_, AppState>) -> Result<crate::storage::db::UsageSummary, String> {
+    state.db.usage_summary().map_err(|e| e.to_string())
 }
 
 #[command]

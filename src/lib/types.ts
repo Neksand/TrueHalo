@@ -26,6 +26,9 @@ export interface TokenUsage {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  /** Stored with each saved assistant message so costs survive reloads. */
+  model?: string;
+  provider?: string;
 }
 
 export interface ChatMessage {
@@ -172,10 +175,39 @@ export interface SessionRecord {
   updated_at: number;
 }
 
+export interface UsageTotals {
+  prompt_tokens: number;
+  completion_tokens: number;
+  responses: number;
+}
+
+export interface UsageRow {
+  provider: string;
+  model: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  responses: number;
+  last_used: number;
+}
+
+export interface DailyUsage {
+  day: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+}
+
+export interface UsageSummary {
+  today: UsageTotals;
+  all_time: UsageTotals;
+  rows: UsageRow[];
+  daily: DailyUsage[];
+}
+
 export interface MessageRecord {
   id: string;
   session_id: string;
   role: "user" | "assistant" | "system";
   content_json: string;
   timestamp: number;
+  usage_json?: string | null;
 }

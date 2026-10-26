@@ -4,6 +4,7 @@ import {
   ChatMessage,
   COMPRESSION_PRESETS,
   ContentPart,
+  ModelPricing,
   ProviderId,
   QuickAction,
   SessionRecord,
@@ -99,6 +100,14 @@ const contentToText = (contentJson: string): string => {
 
 const exportTimestamp = (value: number): string => new Date(value).toLocaleString();
 
+/** `—` means the provider did not report a price for this model. */
+const formatCost = (value: number | null): string => {
+  if (value === null) return "—";
+  if (value === 0) return "$0.00";
+  if (value < 0.01) return `$${value.toFixed(5)}`;
+  return `$${value.toFixed(4)}`;
+};
+
 export const ChatView: React.FC<ChatViewProps> = ({
   activeProvider,
   activeModel,
@@ -139,6 +148,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [toast, setToast] = useState<{ text: string; detail?: string } | null>(null);
+  const [modelPrices, setModelPrices] = useState<Record<string, ModelPricing>>({});
 
   const [isCapturing, setIsCapturing] = useState(false);
   const [attachedImage, setAttachedImage] = useState<{
@@ -183,6 +193,36 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const timer = window.setTimeout(() => setToast(null), 5000);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  // Provider catalogs are the only honest source of prices. A model without a
+  // reported price is shown as "—" instead of an invented number.
+  useEffect(() => {
+    let cancelled = false;
+    const loadPrices = async () => {
+      const providers: ProviderId[] = ["openrouter", "gemini", "openai"];
+      const entries: Array<[string, ModelPricing]> = [];
+      await Promise.all(
+        providers.map(async (provider) => {
+          try {
+            if (!(await tauriApi.hasApiKey(provider))) return;
+            const models = await tauriApi.listModels(provider);
+            for (const model of models) {
+              if (model.pricing) {
+                entries.push([`${provider}:${model.id}`, model.pricing]);
+              }
+            }
+          } catch {
+            // Missing key or offline catalog: costs stay unknown for this provider.
+          }
+        }),
+      );
+      if (!cancelled) setModelPrices(Object.fromEntries(entries));
+    };
+    void loadPrices();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCapture = useCallback(
     async (interactive: boolean) => {
@@ -320,6 +360,45 @@ export const ChatView: React.FC<ChatViewProps> = ({
     );
   }, [messages]);
 
+  const pricePerToken = useCallback((value?: string): number | null => {
+    if (!value) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, []);
+
+  const costForUsage = useCallback(
+    (usage?: TokenUsage): number | null => {
+      if (!usage?.total_tokens) return null;
+      const key = `${usage.provider ?? activeProvider}:${usage.model ?? activeModel}`;
+      const pricing = modelPrices[key];
+      if (!pricing) return null;
+      const promptPrice = pricePerToken(pricing.prompt);
+      const completionPrice = pricePerToken(pricing.completion);
+      if (promptPrice === null || completionPrice === null) return null;
+      return (
+        (usage.prompt_tokens ?? 0) * promptPrice +
+        (usage.completion_tokens ?? 0) * completionPrice
+      );
+    },
+    [modelPrices, activeProvider, activeModel, pricePerToken],
+  );
+
+  // undefined = no usage yet, null = at least one price is unknown.
+  const sessionCost = useMemo<number | null | undefined>(() => {
+    let total = 0;
+    let seen = false;
+    let unknown = false;
+    for (const message of messages) {
+      if (!message.usage?.total_tokens) continue;
+      seen = true;
+      const cost = costForUsage(message.usage);
+      if (cost === null) unknown = true;
+      else total += cost;
+    }
+    if (!seen) return undefined;
+    return unknown ? null : total;
+  }, [messages, costForUsage]);
+
   const handleQuickHide = async () => {
     try {
       await tauriApi.quickHide();
@@ -340,11 +419,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
         } catch {
           content = [{ type: "text", text: m.content_json }];
         }
+        let usage: TokenUsage | undefined;
+        if (m.usage_json) {
+          try {
+            usage = JSON.parse(m.usage_json) as TokenUsage;
+          } catch {
+            usage = undefined;
+          }
+        }
         return {
           id: m.id,
           role: m.role as any,
           content,
           timestamp: m.timestamp,
+          usage,
         };
       });
       setMessages(parsed);
@@ -554,7 +642,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
               assistantPlaceholderId,
               currentSessionId,
               "assistant",
-              JSON.stringify([{ type: "text", text: accumulatedText }])
+              JSON.stringify([{ type: "text", text: accumulatedText }]),
+              usage
+                ? JSON.stringify({
+                    ...usage,
+                    model: activeModel,
+                    provider: activeProvider,
+                  })
+                : undefined,
             );
           } catch (e) {
             console.warn("Could not save assistant message:", e);
@@ -881,6 +976,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 title={`Prompt: ${sessionUsage.prompt_tokens ?? 0} · Completion: ${sessionUsage.completion_tokens ?? 0}`}
               >
                 Σ {sessionUsage.total_tokens.toLocaleString("en-US")} tok
+                {sessionCost !== undefined && ` · ${formatCost(sessionCost)}`}
               </span>
             ) : null}
 
@@ -1058,8 +1154,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
                           )}
                         </button>
                         {message.usage?.total_tokens ? (
-                          <span className="text-slate-500 font-mono">
-                            · {message.usage.total_tokens.toLocaleString("en-US")} tok
+                          <span
+                            className="text-slate-500 font-mono"
+                            title="Estimated from the provider's list price"
+                          >
+                            · {message.usage.total_tokens.toLocaleString("en-US")} tok ·{" "}
+                            {formatCost(costForUsage(message.usage))}
                           </span>
                         ) : null}
                       </div>
