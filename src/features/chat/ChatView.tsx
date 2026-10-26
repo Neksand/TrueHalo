@@ -5,11 +5,13 @@ import {
   COMPRESSION_PRESETS,
   ContentPart,
   ProviderId,
+  QuickAction,
   SessionRecord,
   TokenUsage,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey } from "../../lib/hotkeys";
+import { BUILT_IN_ACTIONS } from "../../lib/quickActions";
 import { MarkdownRenderer } from "../../components/markdown/MarkdownRenderer";
 import {
   Send,
@@ -47,6 +49,7 @@ interface ChatViewProps {
   onOpenSettings: () => void;
   onRequirePermission: () => void;
   permissionGranted: boolean;
+  customActions: QuickAction[];
 }
 
 /** Human readable file size. */
@@ -105,6 +108,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onOpenSettings,
   onRequirePermission,
   permissionGranted,
+  customActions,
 }) => {
   const hotkeys = useMemo(
     () => ({
@@ -114,6 +118,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
       fullscreen: formatHotkey(settings.hotkeyFullscreen),
     }),
     [settings.hotkeyToggle, settings.hotkeyRegion, settings.hotkeyFullscreen],
+  );
+
+  const quickActions = useMemo(
+    () => [...BUILT_IN_ACTIONS, ...customActions],
+    [customActions],
   );
 
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => crypto.randomUUID());
@@ -434,8 +443,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }
   };
 
-  const handleSendMessage = async () => {
-    const trimmed = inputPrompt.trim();
+  const handleSendMessage = async (
+    overridePrompt?: string,
+    action?: QuickAction,
+  ) => {
+    const trimmed = (overridePrompt ?? inputPrompt).trim();
     const ocrText = extractedText?.trim() ?? "";
     if ((!trimmed && !attachedImage && !ocrText) || isStreaming) return;
 
@@ -477,7 +489,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     // If starting a fresh session, record it in SQLite
     if (messages.length === 0) {
-      const title = (trimmed || ocrText).slice(0, 32) || "Screen Analysis";
+      const title =
+        (action?.label || trimmed || ocrText).slice(0, 32) || "Screen Analysis";
       try {
         await tauriApi.createSession(currentSessionId, title, activeProvider, activeModel);
         loadSessions(searchQuery);
@@ -500,7 +513,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     const newHistory = [...messages, userMessage];
     setMessages([...newHistory, assistantMessage]);
-    setInputPrompt("");
+    if (!overridePrompt) setInputPrompt("");
     setAttachedImage(null);
     setExtractedText(null);
     setIsStreaming(true);
@@ -570,10 +583,20 @@ export const ChatView: React.FC<ChatViewProps> = ({
         stream_id: streamId,
         provider: activeProvider,
         model: activeModel,
-        messages: stripOlderImages(newHistory).map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        messages: [
+          ...(action?.system
+            ? [
+                {
+                  role: "system" as const,
+                  content: [{ type: "text" as const, text: action.system }],
+                },
+              ]
+            : []),
+          ...stripOlderImages(newHistory).map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        ],
       });
     } catch (err: any) {
       setIsStreaming(false);
@@ -1155,6 +1178,36 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         )}
 
+        {/* Quick actions */}
+        <div className="px-4 pt-2">
+          <div className="max-w-3xl mx-auto flex items-center gap-1.5 overflow-x-auto pb-1">
+            <span className="text-[10px] uppercase tracking-wide text-slate-500 mr-1 shrink-0">
+              Quick actions
+            </span>
+            {quickActions.map((action) => {
+              const hasContext = Boolean(
+                attachedImage || extractedText?.trim() || inputPrompt.trim(),
+              );
+              const disabled = !hasContext || isStreaming || isCapturing;
+              return (
+                <button
+                  key={action.id}
+                  onClick={() => handleSendMessage(action.prompt, action)}
+                  disabled={disabled}
+                  title={
+                    hasContext
+                      ? action.prompt
+                      : "Capture a screenshot or type a question first"
+                  }
+                  className="shrink-0 px-2.5 py-1 rounded-full border border-surface-border bg-surface-card/70 text-[10px] text-slate-300 hover:text-slate-100 hover:border-halo-accent/50 hover:bg-surface-subtle disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {action.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Input Area */}
         <div className="p-4 border-t border-surface-border bg-surface-card/40 backdrop-blur-md">
           <div className="max-w-3xl mx-auto flex items-end gap-2 bg-[#0b0c10] border border-surface-border focus-within:border-halo-accent rounded-xl p-2 transition-colors shadow-halo-card">
@@ -1226,8 +1279,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
               </button>
             ) : (
               <button
-                onClick={handleSendMessage}
-                disabled={!inputPrompt.trim() && !attachedImage}
+                onClick={() => handleSendMessage()}
+                disabled={!inputPrompt.trim() && !attachedImage && !extractedText?.trim()}
                 className="p-2 rounded-lg bg-halo-accent hover:bg-halo-accent/90 disabled:opacity-30 disabled:cursor-not-allowed text-white shadow-halo-sm transition-all"
                 title="Send message (Enter)"
               >

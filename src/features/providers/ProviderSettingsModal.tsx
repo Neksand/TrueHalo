@@ -5,10 +5,12 @@ import {
   CompressionPreset,
   ModelInfo,
   ProviderId,
+  QuickAction,
   ScreenCaptureStatus,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey, IS_WINDOWS } from "../../lib/hotkeys";
+import { BUILT_IN_ACTIONS } from "../../lib/quickActions";
 import {
   Key,
   Shield,
@@ -24,6 +26,7 @@ import {
   MonitorOff,
   CircleGauge,
   Keyboard,
+  Zap,
 } from "lucide-react";
 
 interface ProviderSettingsModalProps {
@@ -42,6 +45,8 @@ interface ProviderSettingsModalProps {
   onRefreshPermission: () => Promise<void> | void;
   onOpenPermission: () => void;
   onRunSetup: () => void;
+  customActions: QuickAction[];
+  onChangeCustomActions: (actions: QuickAction[]) => void;
 }
 
 const PROVIDERS: {
@@ -184,8 +189,10 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   onRefreshPermission,
   onOpenPermission,
   onRunSetup,
+  customActions,
+  onChangeCustomActions,
 }) => {
-  const [activeTab, setActiveTab] = useState<"providers" | "appearance" | "hotkeys" | "privacy">("providers");
+  const [activeTab, setActiveTab] = useState<"providers" | "appearance" | "hotkeys" | "actions" | "privacy">("providers");
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>(activeProvider);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -195,6 +202,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [searchModel, setSearchModel] = useState("");
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [actionLabel, setActionLabel] = useState("");
+  const [actionPrompt, setActionPrompt] = useState("");
   const [keychainNotice, setKeychainNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -300,7 +309,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-surface-card border border-surface-border rounded-xl w-full max-w-2xl max-h-[88vh] flex flex-col shadow-halo overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface-card border border-surface-border rounded-xl w-full max-w-3xl max-h-[88vh] flex flex-col shadow-halo overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div
           data-tauri-drag-region="deep"
@@ -324,10 +333,10 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
         </div>
 
         {/* Primary Settings Navigation */}
-        <div className="flex border-b border-surface-border px-6 pt-2 gap-4 bg-surface-deep/80 text-xs">
+        <div className="flex border-b border-surface-border px-6 pt-2 gap-4 bg-surface-deep/80 text-xs overflow-x-auto">
           <button
             onClick={() => setActiveTab("providers")}
-            className={`pb-2 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+            className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "providers"
                 ? "border-halo-accent text-slate-100"
                 : "border-transparent text-slate-400 hover:text-slate-200"
@@ -339,7 +348,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
 
           <button
             onClick={() => setActiveTab("appearance")}
-            className={`pb-2 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+            className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "appearance"
                 ? "border-halo-accent text-slate-100"
                 : "border-transparent text-slate-400 hover:text-slate-200"
@@ -351,7 +360,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
 
           <button
             onClick={() => setActiveTab("hotkeys")}
-            className={`pb-2 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+            className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "hotkeys"
                 ? "border-halo-accent text-slate-100"
                 : "border-transparent text-slate-400 hover:text-slate-200"
@@ -362,8 +371,20 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab("actions")}
+            className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+              activeTab === "actions"
+                ? "border-halo-accent text-slate-100"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Quick Actions</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("privacy")}
-            className={`pb-2 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+            className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "privacy"
                 ? "border-halo-accent text-slate-100"
                 : "border-transparent text-slate-400 hover:text-slate-200"
@@ -747,7 +768,137 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           </div>
         )}
 
-        {/* Tab 4: Privacy, Screen Recording & Capture */}
+        {/* Tab 4: Quick Actions */}
+        {activeTab === "actions" && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-100">Quick Actions</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                One-click prompts that run against the current screenshot or
+                recognized text. Custom actions are stored locally.
+              </p>
+            </div>
+
+            {message && (
+              <div
+                className={`p-3 rounded-lg border text-xs ${
+                  message.type === "success"
+                    ? "bg-emerald-950/30 border-emerald-800/40 text-emerald-200"
+                    : "bg-rose-950/30 border-rose-800/40 text-rose-200"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
+
+            <div className="rounded-xl border border-surface-border bg-surface-subtle/30 divide-y divide-surface-border px-4">
+              {BUILT_IN_ACTIONS.map((action) => (
+                <div key={action.id} className="py-3">
+                  <div className="text-xs font-medium text-slate-200">{action.label}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                    {action.prompt}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-slate-100">Your actions</h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Add a name and the prompt to run. Use them from the chip row above
+                the message box.
+              </p>
+            </div>
+
+            {customActions.length > 0 && (
+              <div className="rounded-xl border border-surface-border bg-surface-subtle/30 divide-y divide-surface-border px-4">
+                {customActions.map((action) => (
+                  <div
+                    key={action.id}
+                    className="py-3 flex items-start justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium text-slate-200">
+                        {action.label}
+                      </div>
+                      <div className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
+                        {action.prompt}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        onChangeCustomActions(
+                          customActions.filter((item) => item.id !== action.id),
+                        )
+                      }
+                      className="p-1.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors shrink-0"
+                      title="Delete action"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/30 space-y-3">
+              <div>
+                <label className="text-[11px] font-medium text-slate-300 block mb-1">
+                  Action name
+                </label>
+                <input
+                  value={actionLabel}
+                  onChange={(e) => setActionLabel(e.target.value)}
+                  placeholder="e.g. Write tests"
+                  maxLength={32}
+                  className="w-full px-3 py-2 rounded-lg bg-surface-deep border border-surface-border text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-halo-accent/60"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-slate-300 block mb-1">
+                  Prompt
+                </label>
+                <textarea
+                  value={actionPrompt}
+                  onChange={(e) => setActionPrompt(e.target.value)}
+                  placeholder="What should TrueHalo do with the screenshot or text?"
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg bg-surface-deep border border-surface-border text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-halo-accent/60 resize-y"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  const label = actionLabel.trim();
+                  const prompt = actionPrompt.trim();
+                  if (!label || !prompt) {
+                    setMessage({
+                      type: "error",
+                      text: "Give the action a name and a prompt",
+                    });
+                    return;
+                  }
+                  onChangeCustomActions([
+                    ...customActions,
+                    {
+                      id: crypto.randomUUID(),
+                      label: label.slice(0, 32),
+                      prompt,
+                      custom: true,
+                    },
+                  ]);
+                  setActionLabel("");
+                  setActionPrompt("");
+                  setMessage({ type: "success", text: "Custom action added" });
+                }}
+                className="px-3 py-2 rounded-lg bg-halo-accent hover:bg-halo-accent/90 text-white text-xs font-medium transition-colors"
+              >
+                Add action
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 5: Privacy, Screen Recording & Capture */}
         {activeTab === "privacy" && (
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Screen Recording permission */}

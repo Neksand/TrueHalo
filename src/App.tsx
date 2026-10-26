@@ -7,10 +7,12 @@ import {
   AppSettings,
   DEFAULT_SETTINGS,
   ProviderId,
+  QuickAction,
   ScreenCaptureStatus,
 } from "./lib/types";
 import { tauriApi } from "./lib/tauri";
 import { IS_WINDOWS } from "./lib/hotkeys";
+import { CUSTOM_ACTIONS_PREF, parseCustomActions } from "./lib/quickActions";
 
 const PREF_KEYS: Record<keyof AppSettings, string> = {
   windowOpacity: "window_opacity",
@@ -34,6 +36,7 @@ export const App: React.FC = () => {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isPermissionOpen, setIsPermissionOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [customActions, setCustomActions] = useState<QuickAction[]>([]);
   const [permissionStatus, setPermissionStatus] = useState<ScreenCaptureStatus | null>(null);
 
   // ---- Persist one settings field in SQLite and apply it natively -------------
@@ -84,6 +87,7 @@ export const App: React.FC = () => {
           hotkeyRegionPref,
           hotkeyFullscreenPref,
           textModePref,
+          customActionsPref,
         ] = await Promise.all([
           tauriApi.getPreference("active_provider"),
           tauriApi.getPreference("active_model"),
@@ -99,7 +103,10 @@ export const App: React.FC = () => {
           tauriApi.getPreference(PREF_KEYS.hotkeyRegion),
           tauriApi.getPreference(PREF_KEYS.hotkeyFullscreen),
           tauriApi.getPreference(PREF_KEYS.textMode),
+          tauriApi.getPreference(CUSTOM_ACTIONS_PREF),
         ]);
+
+        setCustomActions(parseCustomActions(customActionsPref));
 
         if (providerPref) setActiveProvider(providerPref as ProviderId);
         if (modelPref) {
@@ -254,6 +261,15 @@ export const App: React.FC = () => {
     }
   };
 
+  const updateCustomActions = useCallback(async (actions: QuickAction[]) => {
+    setCustomActions(actions);
+    try {
+      await tauriApi.setPreference(CUSTOM_ACTIONS_PREF, JSON.stringify(actions));
+    } catch (e) {
+      console.warn("Could not save custom quick actions:", e);
+    }
+  }, []);
+
   const handleOnboardingComplete = async (provider: ProviderId, model: string) => {
     setActiveProvider(provider);
     setActiveModel(model);
@@ -285,6 +301,7 @@ export const App: React.FC = () => {
           void refreshPermission();
         }}
         permissionGranted={permissionStatus ? permissionStatus.granted : true}
+        customActions={customActions}
       />
 
       <ProviderSettingsModal
@@ -302,6 +319,8 @@ export const App: React.FC = () => {
         permissionStatus={permissionStatus}
         onRefreshPermission={refreshPermission}
         onOpenPermission={() => setIsPermissionOpen(true)}
+        customActions={customActions}
+        onChangeCustomActions={updateCustomActions}
         onRunSetup={() => {
           setIsSettingsOpen(false);
           setIsOnboardingOpen(true);

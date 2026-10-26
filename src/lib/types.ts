@@ -98,6 +98,15 @@ export type CompressionPreset = "quality" | "balanced" | "speed";
 /** How captured screenshots are sent to the model. */
 export type TextMode = "auto" | "image" | "text";
 
+/** One-click prompt applied to the current screenshot or recognized text. */
+export interface QuickAction {
+  id: string;
+  label: string;
+  prompt: string;
+  system?: string;
+  custom?: boolean;
+}
+
 export interface AppSettings {
   windowOpacity: number;
   vibrancy: boolean;
