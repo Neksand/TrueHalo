@@ -40,6 +40,7 @@ interface ProviderSettingsModalProps {
   permissionStatus: ScreenCaptureStatus | null;
   onRefreshPermission: () => Promise<void> | void;
   onOpenPermission: () => void;
+  onRunSetup: () => void;
 }
 
 const PROVIDERS: {
@@ -85,6 +86,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   permissionStatus,
   onRefreshPermission,
   onOpenPermission,
+  onRunSetup,
 }) => {
   const [activeTab, setActiveTab] = useState<"providers" | "appearance" | "privacy">("providers");
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>(activeProvider);
@@ -266,6 +268,12 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   </button>
                 );
               })}
+              <button
+                onClick={onRunSetup}
+                className="ml-auto mb-1 px-2.5 py-1 text-[10px] rounded-md border border-surface-border text-slate-400 hover:text-slate-200 hover:bg-surface-subtle transition-colors"
+              >
+                Setup wizard
+              </button>
             </div>
 
             {/* Provider Content */}

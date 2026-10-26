@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ChatView } from "./features/chat/ChatView";
 import { ProviderSettingsModal } from "./features/providers/ProviderSettingsModal";
+import { OnboardingWizard } from "./features/onboarding/OnboardingWizard";
 import { PermissionModal } from "./features/capture/PermissionModal";
 import {
   AppSettings,
@@ -26,6 +27,7 @@ export const App: React.FC = () => {
   const [activeProvider, setActiveProvider] = useState<ProviderId>("openrouter");
   const [activeModel, setActiveModel] = useState<string>("minimax/minimax-m3.1-flash:free");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [isPermissionOpen, setIsPermissionOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [permissionStatus, setPermissionStatus] = useState<ScreenCaptureStatus | null>(null);
@@ -145,7 +147,7 @@ export const App: React.FC = () => {
       const hasOpenAI = await tauriApi.hasApiKey("openai");
 
       if (!hasOpenRouter && !hasGemini && !hasOpenAI) {
-        setIsSettingsOpen(true);
+        setIsOnboardingOpen(true);
       }
     })();
   }, [refreshPermission]);
@@ -233,6 +235,18 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleOnboardingComplete = async (provider: ProviderId, model: string) => {
+    setActiveProvider(provider);
+    setActiveModel(model);
+    setIsOnboardingOpen(false);
+    try {
+      await tauriApi.setPreference("active_provider", provider);
+      await tauriApi.setPreference("active_model", model);
+    } catch (e) {
+      console.warn("Could not save the setup choices:", e);
+    }
+  };
+
   const handleToggleAlwaysOnTop = async (val: boolean) => {
     updateSettings({ alwaysOnTop: val });
     await tauriApi.setAlwaysOnTop(val);
@@ -269,6 +283,15 @@ export const App: React.FC = () => {
         permissionStatus={permissionStatus}
         onRefreshPermission={refreshPermission}
         onOpenPermission={() => setIsPermissionOpen(true)}
+        onRunSetup={() => {
+          setIsSettingsOpen(false);
+          setIsOnboardingOpen(true);
+        }}
+      />
+
+      <OnboardingWizard
+        isOpen={isOnboardingOpen}
+        onComplete={handleOnboardingComplete}
       />
 
       <PermissionModal
