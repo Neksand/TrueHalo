@@ -38,6 +38,7 @@ import {
   Pencil,
   FileText,
   FileJson,
+  Scale,
 } from "lucide-react";
 import logoImg from "../../assets/logo.png";
 
@@ -142,6 +143,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [inputPrompt, setInputPrompt] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentStreamId, setCurrentStreamId] = useState<string | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1234,6 +1236,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         )}
 
+        {/* Model compare split view */}
+        {compareMode && (
+          <div className="mx-4 mb-3 rounded-xl border border-halo-accent/30 bg-gradient-to-r from-surface-card/60 to-surface-card/40 p-3 space-y-3 shadow-halo-sm">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-slate-100">Compare</span>
+              <button onClick={() => setCompareMode(false)} className="text-[10px] text-slate-400 hover:text-slate-200">Close compare</button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-[11px]">
+              <div className="rounded-lg border border-surface-border bg-surface-deep/40 p-2.5">
+                <div className="font-medium text-slate-200 mb-1">Side A — current model</div>
+                <div className="text-slate-400">Active response stream</div>
+              </div>
+              <div className="rounded-lg border border-surface-border bg-surface-deep/40 p-2.5">
+                <div className="font-medium text-slate-200 mb-1">Side B — compare model</div>
+                <div className="text-slate-400">Parallel stream</div>
+              </div>
+            </div>
+            <div className="flex gap-2 text-[10px]">
+              <button onClick={() => setCompareMode(false)} className="flex-1 py-1.5 rounded-lg bg-halo-accent/80 hover:bg-halo-accent text-white font-medium transition-colors">Run compare</button>
+              <button onClick={() => setCompareMode(false)} className="px-3 py-1.5 rounded-lg border border-surface-border text-slate-400 hover:text-slate-200 transition-colors">Cancel</button>
+            </div>
+          </div>
+        )}
+
         {/* Screen Capture / File Preview */}
         {attachedImage && (
           <div className="mx-4 mb-2 p-2 rounded-lg bg-surface-card border border-halo-accent/50 flex items-center gap-3 shadow-halo-sm">
@@ -1343,6 +1369,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
               title={`Capture fullscreen (${hotkeys.fullscreen})`}
             >
               <Monitor className="w-4 h-4" />
+            </button>
+
+            {/* Compare mode toggle */}
+            <button
+              type="button"
+              onClick={() => setCompareMode(!compareMode)}
+              className={`p-2 rounded-lg transition-colors ${compareMode ? "text-halo-accent bg-halo-accent/15" : "text-slate-400 hover:text-violet-400 hover:bg-surface-subtle"}`}
+              title="Compare two models"
+            >
+              <Scale className="w-4 h-4" />
             </button>
 
             {/* Attach local file button */}
