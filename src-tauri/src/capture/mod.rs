@@ -30,6 +30,9 @@ pub struct CaptureOptions {
     /// Hide the TrueHalo window before taking the picture so it never shows up
     /// inside its own screenshot and does not steal focus.
     pub hide_window: bool,
+    /// Run local OCR on the captured image and include the text in the response.
+    #[serde(default)]
+    pub ocr: bool,
 }
 
 impl Default for CaptureOptions {
@@ -41,6 +44,7 @@ impl Default for CaptureOptions {
             max_dimension: 1568,
             quality: 80,
             hide_window: true,
+            ocr: false,
         }
     }
 }
@@ -56,6 +60,8 @@ pub enum CaptureResponse {
         width: u32,
         height: u32,
         compressed: bool,
+        /// Text recognized on-device when `CaptureOptions::ocr` was set.
+        ocr_text: Option<String>,
     },
     /// The user pressed Escape in the interactive selection overlay.
     Cancelled,
@@ -126,6 +132,7 @@ impl ScreenCaptureService {
             width,
             height,
             compressed,
+            ocr_text: None,
         })
     }
 }

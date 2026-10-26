@@ -6,6 +6,7 @@ pub mod commands;
 pub mod hotkeys;
 #[cfg(target_os = "macos")]
 pub mod macos;
+pub mod ocr;
 pub mod overlay;
 pub mod storage;
 

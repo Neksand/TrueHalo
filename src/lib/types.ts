@@ -67,6 +67,7 @@ export interface CaptureOptions {
   max_dimension: number;
   quality: number;
   hide_window: boolean;
+  ocr: boolean;
 }
 
 export type CaptureResponse =
@@ -79,6 +80,7 @@ export type CaptureResponse =
       width: number;
       height: number;
       compressed: boolean;
+      ocr_text?: string | null;
     }
   | { status: "cancelled" }
   | { status: "permission_required" };
@@ -93,6 +95,9 @@ export interface ScreenCaptureStatus {
 /** Compression preset for outgoing screenshots. */
 export type CompressionPreset = "quality" | "balanced" | "speed";
 
+/** How captured screenshots are sent to the model. */
+export type TextMode = "auto" | "image" | "text";
+
 export interface AppSettings {
   windowOpacity: number;
   vibrancy: boolean;
@@ -106,6 +111,7 @@ export interface AppSettings {
   hotkeyToggle: string;
   hotkeyRegion: string;
   hotkeyFullscreen: string;
+  textMode: TextMode;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -121,6 +127,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   hotkeyToggle: "Alt+Space",
   hotkeyRegion: "Alt+Shift+Digit2",
   hotkeyFullscreen: "Alt+Shift+Digit3",
+  textMode: "auto",
 };
 
 export const COMPRESSION_PRESETS: Record<

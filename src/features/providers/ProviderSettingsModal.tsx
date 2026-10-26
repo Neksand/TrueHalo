@@ -921,6 +921,55 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
               </div>
             </div>
 
+            {/* Screenshot input mode */}
+            <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/30 space-y-3">
+              <div>
+                <span className="text-xs font-semibold text-slate-100">
+                  Screenshot input
+                </span>
+                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                  Text mode recognizes text on-device with the system OCR engine
+                  and sends only that text. It is faster, cheaper, and easier to
+                  correct before asking.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {(["auto", "text", "image"] as const).map((mode) => {
+                  const isActive = settings.textMode === mode;
+                  const label =
+                    mode === "auto" ? "Auto" : mode === "text" ? "Text only" : "Image only";
+                  const hint =
+                    mode === "auto"
+                      ? "OCR when useful"
+                      : mode === "text"
+                        ? "Fallback to image"
+                        : "Always send image";
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => onChangeSettings({ textMode: mode })}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        isActive
+                          ? "bg-halo-accent/15 border-halo-accent/60 text-slate-100"
+                          : "bg-[#0b0c10] border-surface-border hover:border-surface-border/80 text-slate-300"
+                      }`}
+                    >
+                      <span className="text-xs font-medium block">{label}</span>
+                      <span className="text-[10px] text-slate-500 block mt-0.5">
+                        {hint}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="text-[10px] text-slate-500">
+                OCR never leaves your device. If it finds no text, TrueHalo sends
+                the screenshot instead so the question still works.
+              </p>
+            </div>
+
             {/* Stealth */}
             <div>
               <h3 className="text-sm font-semibold text-slate-100">Stealth mode</h3>

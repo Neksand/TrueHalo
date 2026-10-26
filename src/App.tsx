@@ -24,6 +24,7 @@ const PREF_KEYS: Record<keyof AppSettings, string> = {
   hotkeyToggle: "hotkey_toggle",
   hotkeyRegion: "hotkey_region",
   hotkeyFullscreen: "hotkey_fullscreen",
+  textMode: "text_mode",
 };
 
 export const App: React.FC = () => {
@@ -82,6 +83,7 @@ export const App: React.FC = () => {
           hotkeyTogglePref,
           hotkeyRegionPref,
           hotkeyFullscreenPref,
+          textModePref,
         ] = await Promise.all([
           tauriApi.getPreference("active_provider"),
           tauriApi.getPreference("active_model"),
@@ -96,6 +98,7 @@ export const App: React.FC = () => {
           tauriApi.getPreference(PREF_KEYS.hotkeyToggle),
           tauriApi.getPreference(PREF_KEYS.hotkeyRegion),
           tauriApi.getPreference(PREF_KEYS.hotkeyFullscreen),
+          tauriApi.getPreference(PREF_KEYS.textMode),
         ]);
 
         if (providerPref) setActiveProvider(providerPref as ProviderId);
@@ -130,6 +133,10 @@ export const App: React.FC = () => {
           hotkeyToggle: hotkeyTogglePref || DEFAULT_SETTINGS.hotkeyToggle,
           hotkeyRegion: hotkeyRegionPref || DEFAULT_SETTINGS.hotkeyRegion,
           hotkeyFullscreen: hotkeyFullscreenPref || DEFAULT_SETTINGS.hotkeyFullscreen,
+          textMode:
+            textModePref === "image" || textModePref === "text"
+              ? textModePref
+              : "auto",
         };
         setSettings(loaded);
 

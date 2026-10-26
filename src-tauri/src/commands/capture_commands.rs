@@ -90,8 +90,10 @@ pub async fn capture_screen(
         tokio::time::sleep(Duration::from_millis(220)).await;
     }
 
+    let run_ocr = options.ocr;
+
     // Run screencapture in a blocking thread so the async runtime is never blocked
-    let capture_result =
+    let mut capture_result =
         tokio::task::spawn_blocking(move || ScreenCaptureService::capture(options))
             .await
             .map_err(|e| e.to_string())?;
@@ -99,6 +101,24 @@ pub async fn capture_screen(
     if was_visible {
         crate::overlay::show(&app);
         tracing::info!("capture_screen: window restored");
+    }
+
+    // OCR stays on-device. An empty result or an error is not fatal: the UI
+    // falls back to sending the image.
+    if run_ocr {
+        if let Ok(CaptureResponse::Success {
+            base64_data,
+            media_type,
+            ocr_text,
+            ..
+        }) = &mut capture_result
+        {
+            match crate::ocr::recognize(base64_data, media_type).await {
+                Ok(text) if !text.trim().is_empty() => *ocr_text = Some(text),
+                Ok(_) => tracing::info!("capture_screen: OCR found no text"),
+                Err(err) => tracing::warn!("capture_screen: local OCR failed: {}", err),
+            }
+        }
     }
 
     tracing::info!(

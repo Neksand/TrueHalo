@@ -142,6 +142,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     height: number;
     compressed: boolean;
   } | null>(null);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -187,19 +188,31 @@ export const ChatView: React.FC<ChatViewProps> = ({
           max_dimension: preset.maxDimension,
           quality: preset.quality,
           hide_window: settings.hideWindowOnCapture,
+          ocr: settings.textMode !== "image",
         });
 
         if (result.status === "success") {
-          setAttachedImage({
-            data: result.base64_data,
-            mediaType: result.media_type,
-            previewUrl: `data:${result.media_type};base64,${result.base64_data}`,
-            bytes: result.file_size_bytes,
-            originalBytes: result.original_size_bytes,
-            width: result.width,
-            height: result.height,
-            compressed: result.compressed,
-          });
+          const ocrText = result.ocr_text?.trim() ?? "";
+          const minimum = settings.textMode === "auto" ? 12 : 1;
+          const useText =
+            settings.textMode !== "image" && ocrText.length >= minimum;
+
+          if (useText) {
+            setExtractedText(ocrText);
+            setAttachedImage(null);
+          } else {
+            setExtractedText(null);
+            setAttachedImage({
+              data: result.base64_data,
+              mediaType: result.media_type,
+              previewUrl: `data:${result.media_type};base64,${result.base64_data}`,
+              bytes: result.file_size_bytes,
+              originalBytes: result.original_size_bytes,
+              width: result.width,
+              height: result.height,
+              compressed: result.compressed,
+            });
+          }
           // Make sure the user actually sees the captured overlay again.
           await tauriApi.showWindow();
         } else if (result.status === "permission_required") {
@@ -221,6 +234,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       settings.compressionPreset,
       settings.compressScreenshots,
       settings.hideWindowOnCapture,
+      settings.textMode,
       onRequirePermission,
     ]
   );
@@ -422,13 +436,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const handleSendMessage = async () => {
     const trimmed = inputPrompt.trim();
-    if ((!trimmed && !attachedImage) || isStreaming) return;
+    const ocrText = extractedText?.trim() ?? "";
+    if ((!trimmed && !attachedImage && !ocrText) || isStreaming) return;
 
     setErrorMessage(null);
     const contentParts: ContentPart[] = [];
+    const text = [trimmed, ocrText].filter(Boolean).join("\n\n");
 
-    if (trimmed) {
-      contentParts.push({ type: "text", text: trimmed });
+    if (text) {
+      contentParts.push({ type: "text", text });
     }
 
     if (attachedImage) {
@@ -461,7 +477,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     // If starting a fresh session, record it in SQLite
     if (messages.length === 0) {
-      const title = trimmed.slice(0, 32) || "Screen Analysis";
+      const title = (trimmed || ocrText).slice(0, 32) || "Screen Analysis";
       try {
         await tauriApi.createSession(currentSessionId, title, activeProvider, activeModel);
         loadSessions(searchQuery);
@@ -486,6 +502,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setMessages([...newHistory, assistantMessage]);
     setInputPrompt("");
     setAttachedImage(null);
+    setExtractedText(null);
     setIsStreaming(true);
 
     let accumulatedText = "";
@@ -602,6 +619,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setMessages([]);
     setErrorMessage(null);
     setAttachedImage(null);
+    setExtractedText(null);
   };
 
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -610,6 +628,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     const reader = new FileReader();
     reader.onload = () => {
+      setExtractedText(null);
       const result = reader.result as string;
       const base64Data = result.split(",")[1];
 
@@ -1061,6 +1080,34 @@ export const ChatView: React.FC<ChatViewProps> = ({
             >
               Settings
             </button>
+          </div>
+        )}
+
+        {/* Local OCR preview */}
+        {extractedText !== null && (
+          <div className="mx-4 mb-2 p-2.5 rounded-lg bg-surface-card border border-sky-700/50 shadow-halo-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[11px] font-medium text-slate-100 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-sky-400" />
+                Text from screenshot · edit before sending
+              </span>
+              <button
+                onClick={() => setExtractedText(null)}
+                className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                title="Remove text"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <textarea
+              value={extractedText}
+              onChange={(e) => setExtractedText(e.target.value)}
+              rows={4}
+              className="w-full resize-y bg-black/30 border border-surface-border rounded-lg px-2.5 py-2 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-sky-600/60"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Recognized on-device. Only this text is sent — the screenshot is discarded.
+            </p>
           </div>
         )}
 
