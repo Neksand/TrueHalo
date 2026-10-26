@@ -8,7 +8,7 @@ import {
   ScreenCaptureStatus,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
-import { IS_WINDOWS } from "../../lib/hotkeys";
+import { formatHotkey, IS_WINDOWS } from "../../lib/hotkeys";
 import {
   Key,
   Shield,
@@ -23,6 +23,7 @@ import {
   Sliders,
   MonitorOff,
   CircleGauge,
+  Keyboard,
 } from "lucide-react";
 
 interface ProviderSettingsModalProps {
@@ -71,6 +72,102 @@ const PROVIDERS: {
   },
 ];
 
+const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
+
+const HotkeyRecorder: React.FC<{
+  value: string;
+  defaultValue: string;
+  onChange: (value: string) => void;
+}> = ({ value, defaultValue, onChange }) => {
+  const [recording, setRecording] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Tab") {
+      setRecording(false);
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === "Escape") {
+      setRecording(false);
+      setHint(null);
+      event.currentTarget.blur();
+      return;
+    }
+
+    if (event.key === "Backspace" || event.key === "Delete") {
+      onChange(defaultValue);
+      setRecording(false);
+      setHint(null);
+      event.currentTarget.blur();
+      return;
+    }
+
+    if (MODIFIER_KEYS.has(event.key)) return;
+    if (!event.code) return;
+
+    const parts: string[] = [];
+    if (event.metaKey) parts.push("Super");
+    if (event.ctrlKey) parts.push("Control");
+    if (event.altKey) parts.push("Alt");
+    if (event.shiftKey) parts.push("Shift");
+
+    const isFunctionKey = /^F\d{1,2}$/.test(event.code);
+    if (parts.length === 0 && !isFunctionKey) {
+      setHint("Hold Ctrl, Alt or ⌘ with the key");
+      return;
+    }
+
+    parts.push(event.code);
+    onChange(parts.join("+"));
+    setRecording(false);
+    setHint(null);
+    event.currentTarget.blur();
+  };
+
+  return (
+    <div className="flex flex-col items-end gap-1 shrink-0">
+      <input
+        readOnly
+        aria-label="Record a shortcut"
+        title="Click, then press a key combination"
+        value={recording ? "Press a combination…" : formatHotkey(value)}
+        onFocus={() => {
+          setRecording(true);
+          setHint(null);
+        }}
+        onBlur={() => setRecording(false)}
+        onKeyDown={handleKeyDown}
+        className={`w-44 px-2.5 py-1.5 rounded-lg bg-surface-deep border text-center font-mono text-[11px] cursor-pointer focus:outline-none transition-colors ${
+          recording
+            ? "border-halo-accent/70 text-halo-accent"
+            : "border-surface-border text-slate-200 hover:border-slate-500"
+        }`}
+      />
+      {hint && <span className="text-[10px] text-amber-300/80">{hint}</span>}
+    </div>
+  );
+};
+
+const HotkeyRow: React.FC<{
+  label: string;
+  description: string;
+  value: string;
+  defaultValue: string;
+  onChange: (value: string) => void;
+}> = ({ label, description, value, defaultValue, onChange }) => (
+  <div className="flex items-center justify-between gap-4 py-3.5">
+    <div className="min-w-0">
+      <div className="text-xs font-medium text-slate-200">{label}</div>
+      <div className="text-[11px] text-slate-500 mt-0.5">{description}</div>
+    </div>
+    <HotkeyRecorder value={value} defaultValue={defaultValue} onChange={onChange} />
+  </div>
+);
+
 export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   isOpen,
   onClose,
@@ -88,7 +185,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   onOpenPermission,
   onRunSetup,
 }) => {
-  const [activeTab, setActiveTab] = useState<"providers" | "appearance" | "privacy">("providers");
+  const [activeTab, setActiveTab] = useState<"providers" | "appearance" | "hotkeys" | "privacy">("providers");
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>(activeProvider);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -171,6 +268,27 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     }
   };
 
+  const applyHotkeys = async (patch: Partial<AppSettings>) => {
+    const next = { ...settings, ...patch };
+    try {
+      await tauriApi.setHotkeys(
+        next.hotkeyToggle,
+        next.hotkeyRegion,
+        next.hotkeyFullscreen,
+      );
+      onChangeSettings(patch);
+      setMessage({ type: "success", text: "Shortcuts updated" });
+    } catch (e) {
+      const text =
+        typeof e === "string"
+          ? e
+          : e instanceof Error
+            ? e.message
+            : "Could not update the shortcuts";
+      setMessage({ type: "error", text });
+    }
+  };
+
   if (!isOpen) return null;
 
   const currentProviderInfo = PROVIDERS.find((p) => p.id === selectedProvider)!;
@@ -229,6 +347,18 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           >
             <Sliders className="w-3.5 h-3.5" />
             <span>Transparency &amp; Appearance</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("hotkeys")}
+            className={`pb-2 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+              activeTab === "hotkeys"
+                ? "border-halo-accent text-slate-100"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <Keyboard className="w-3.5 h-3.5" />
+            <span>Shortcuts</span>
           </button>
 
           <button
@@ -555,7 +685,69 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           </div>
         )}
 
-        {/* Tab 3: Privacy, Screen Recording & Capture */}
+        {/* Tab 3: Global shortcuts */}
+        {activeTab === "hotkeys" && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-100">Global shortcuts</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Click a shortcut and press the new key combination. Use at least one
+                modifier (Ctrl, Alt or ⌘). Esc cancels, Backspace resets one shortcut.
+              </p>
+            </div>
+
+            {message && (
+              <div
+                className={`p-3 rounded-lg border text-xs ${
+                  message.type === "success"
+                    ? "bg-emerald-950/30 border-emerald-800/40 text-emerald-200"
+                    : "bg-rose-950/30 border-rose-800/40 text-rose-200"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
+
+            <div className="rounded-xl border border-surface-border bg-surface-subtle/30 divide-y divide-surface-border px-4">
+              <HotkeyRow
+                label="Show / hide overlay"
+                description="Works even when TrueHalo is hidden in the menu bar."
+                value={settings.hotkeyToggle}
+                defaultValue="Alt+Space"
+                onChange={(value) => applyHotkeys({ hotkeyToggle: value })}
+              />
+              <HotkeyRow
+                label="Capture region"
+                description="Drag a rectangle, then ask about it."
+                value={settings.hotkeyRegion}
+                defaultValue="Alt+Shift+Digit2"
+                onChange={(value) => applyHotkeys({ hotkeyRegion: value })}
+              />
+              <HotkeyRow
+                label="Capture full screen"
+                description="Grab every display and analyze it."
+                value={settings.hotkeyFullscreen}
+                defaultValue="Alt+Shift+Digit3"
+                onChange={(value) => applyHotkeys({ hotkeyFullscreen: value })}
+              />
+            </div>
+
+            <button
+              onClick={() =>
+                applyHotkeys({
+                  hotkeyToggle: "Alt+Space",
+                  hotkeyRegion: "Alt+Shift+Digit2",
+                  hotkeyFullscreen: "Alt+Shift+Digit3",
+                })
+              }
+              className="px-3 py-1.5 text-[11px] rounded-lg border border-surface-border text-slate-400 hover:text-slate-200 hover:bg-surface-subtle transition-colors"
+            >
+              Reset to defaults
+            </button>
+          </div>
+        )}
+
+        {/* Tab 4: Privacy, Screen Recording & Capture */}
         {activeTab === "privacy" && (
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Screen Recording permission */}

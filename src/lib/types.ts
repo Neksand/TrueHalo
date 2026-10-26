@@ -102,6 +102,10 @@ export interface AppSettings {
   compressScreenshots: boolean;
   compressionPreset: CompressionPreset;
   hideWindowOnCapture: boolean;
+  /** Tauri accelerator strings, e.g. "Alt+Shift+Digit2". */
+  hotkeyToggle: string;
+  hotkeyRegion: string;
+  hotkeyFullscreen: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -114,6 +118,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   compressScreenshots: true,
   compressionPreset: "balanced",
   hideWindowOnCapture: true,
+  hotkeyToggle: "Alt+Space",
+  hotkeyRegion: "Alt+Shift+Digit2",
+  hotkeyFullscreen: "Alt+Shift+Digit3",
 };
 
 export const COMPRESSION_PRESETS: Record<

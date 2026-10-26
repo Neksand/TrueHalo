@@ -21,6 +21,9 @@ const PREF_KEYS: Record<keyof AppSettings, string> = {
   compressScreenshots: "compress_screenshots",
   compressionPreset: "compression_preset",
   hideWindowOnCapture: "hide_window_on_capture",
+  hotkeyToggle: "hotkey_toggle",
+  hotkeyRegion: "hotkey_region",
+  hotkeyFullscreen: "hotkey_fullscreen",
 };
 
 export const App: React.FC = () => {
@@ -76,6 +79,9 @@ export const App: React.FC = () => {
           compress,
           preset,
           hideOnCapture,
+          hotkeyTogglePref,
+          hotkeyRegionPref,
+          hotkeyFullscreenPref,
         ] = await Promise.all([
           tauriApi.getPreference("active_provider"),
           tauriApi.getPreference("active_model"),
@@ -87,6 +93,9 @@ export const App: React.FC = () => {
           tauriApi.getPreference(PREF_KEYS.compressScreenshots),
           tauriApi.getPreference(PREF_KEYS.compressionPreset),
           tauriApi.getPreference(PREF_KEYS.hideWindowOnCapture),
+          tauriApi.getPreference(PREF_KEYS.hotkeyToggle),
+          tauriApi.getPreference(PREF_KEYS.hotkeyRegion),
+          tauriApi.getPreference(PREF_KEYS.hotkeyFullscreen),
         ]);
 
         if (providerPref) setActiveProvider(providerPref as ProviderId);
@@ -118,6 +127,9 @@ export const App: React.FC = () => {
             hideOnCapture !== null
               ? hideOnCapture === "true"
               : DEFAULT_SETTINGS.hideWindowOnCapture,
+          hotkeyToggle: hotkeyTogglePref || DEFAULT_SETTINGS.hotkeyToggle,
+          hotkeyRegion: hotkeyRegionPref || DEFAULT_SETTINGS.hotkeyRegion,
+          hotkeyFullscreen: hotkeyFullscreenPref || DEFAULT_SETTINGS.hotkeyFullscreen,
         };
         setSettings(loaded);
 

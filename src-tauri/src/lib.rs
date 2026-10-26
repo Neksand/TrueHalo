@@ -3,6 +3,7 @@ pub mod app_state;
 pub mod auth;
 pub mod capture;
 pub mod commands;
+pub mod hotkeys;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod overlay;
@@ -16,7 +17,6 @@ use storage::db::DatabaseManager;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::TrayIconBuilder;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 /// Minimum delay between two overlay toggles (guards against duplicated key
 /// events / key auto-repeat causing a show-hide-show flip-flop).
@@ -117,7 +117,7 @@ fn show_overlay(app: &tauri::AppHandle) {
 }
 
 /// Toggle the overlay window visibility.
-fn toggle_overlay_window(app: &tauri::AppHandle) {
+pub(crate) fn toggle_overlay_window(app: &tauri::AppHandle) {
     // Debounce duplicated shortcut events (key repeat, plugin double-fires).
     let now = now_ms();
     let last = LAST_TOGGLE_MS.load(Ordering::Relaxed);
@@ -194,7 +194,29 @@ pub fn run() {
 
             restore_window_geometry(app.handle(), &db);
 
+            // Read the user's shortcuts before the database moves into state.
+            let stored_hotkeys = hotkeys::HotkeyConfig::from_db(&db);
+
             app.manage(AppState::new(db));
+
+            // Register shortcuts before the tray is built so its labels match
+            // what is actually active. If a stored shortcut is taken by another
+            // app, fall back to the defaults instead of leaving the overlay
+            // unreachable.
+            let active_hotkeys = match hotkeys::register(app.handle(), &stored_hotkeys) {
+                Ok(()) => stored_hotkeys,
+                Err(err) => {
+                    tracing::warn!(
+                        "Could not register saved shortcuts ({}); using defaults",
+                        err
+                    );
+                    let defaults = hotkeys::HotkeyConfig::default();
+                    if let Err(fallback_err) = hotkeys::register(app.handle(), &defaults) {
+                        tracing::error!("Could not register default shortcuts: {}", fallback_err);
+                    }
+                    defaults
+                }
+            };
 
             // Apply the persisted capture protection before the first paint, so
             // the overlay is never visible in a recording, even for a frame.
@@ -208,7 +230,7 @@ pub fn run() {
             spawn_geometry_flusher(app.handle().clone());
 
             // Menu bar (tray) icon: essential when the app is hidden from the Dock.
-            setup_tray(app.handle())?;
+            setup_tray(app.handle(), &active_hotkeys)?;
 
             if vibrancy {
                 if let Some(window) = app.get_webview_window("main") {
@@ -235,46 +257,6 @@ pub fn run() {
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.set_always_on_top(true);
                 }
-            }
-
-            // Register Global Shortcuts:
-            // 1. Alt+Space (Option+Space on macOS): Toggle TrueHalo Overlay
-            let handle_for_toggle = app.handle().clone();
-            if let Err(e) =
-                app.global_shortcut()
-                    .on_shortcut("Alt+Space", move |_app, _shortcut, event| {
-                        if event.state == ShortcutState::Pressed {
-                            toggle_overlay_window(&handle_for_toggle);
-                        }
-                    })
-            {
-                tracing::warn!("Could not register Alt+Space global shortcut: {}", e);
-            }
-
-            // 2. Alt+Shift+Digit2 (Option+Shift+2): Quick Region Capture
-            let handle_for_cap2 = app.handle().clone();
-            if let Err(e) = app.global_shortcut().on_shortcut(
-                "Alt+Shift+Digit2",
-                move |_app, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        let _ = handle_for_cap2.emit("hotkey:capture-region", ());
-                    }
-                },
-            ) {
-                tracing::warn!("Could not register Alt+Shift+2 global shortcut: {}", e);
-            }
-
-            // 3. Alt+Shift+Digit3 (Option+Shift+3): Quick Full Screen Capture
-            let handle_for_cap3 = app.handle().clone();
-            if let Err(e) = app.global_shortcut().on_shortcut(
-                "Alt+Shift+Digit3",
-                move |_app, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        let _ = handle_for_cap3.emit("hotkey:capture-fullscreen", ());
-                    }
-                },
-            ) {
-                tracing::warn!("Could not register Alt+Shift+3 global shortcut: {}", e);
             }
 
             Ok(())
@@ -319,6 +301,7 @@ pub fn run() {
             capture_commands::restart_app,
             // System
             system_commands::open_external,
+            system_commands::set_hotkeys,
             // SQLite Storage & Preferences
             storage_commands::list_sessions,
             storage_commands::create_session,
@@ -530,25 +513,29 @@ fn apply_vibrancy(window: &tauri::WebviewWindow) {
 }
 
 /// Build the tray icon with the quick actions the overlay needs.
-fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
-    #[cfg(target_os = "macos")]
-    let (region_hint, screen_hint) = ("⌥⇧2", "⌥⇧3");
-    #[cfg(not(target_os = "macos"))]
-    let (region_hint, screen_hint) = ("Alt+Shift+2", "Alt+Shift+3");
-
-    let toggle = MenuItemBuilder::with_id("toggle", "Show / Hide").build(app)?;
-    let region =
-        MenuItemBuilder::with_id("capture_region", format!("Capture Region  {}", region_hint))
-            .build(app)?;
+fn build_tray_menu(
+    app: &tauri::AppHandle,
+    hotkeys: &hotkeys::HotkeyConfig,
+) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let toggle = MenuItemBuilder::with_id(
+        "toggle",
+        format!("Show / Hide  {}", hotkeys.toggle_label()),
+    )
+    .build(app)?;
+    let region = MenuItemBuilder::with_id(
+        "capture_region",
+        format!("Capture Region  {}", hotkeys.region_label()),
+    )
+    .build(app)?;
     let fullscreen = MenuItemBuilder::with_id(
         "capture_fullscreen",
-        format!("Capture Screen  {}", screen_hint),
+        format!("Capture Screen  {}", hotkeys.fullscreen_label()),
     )
     .build(app)?;
     let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit TrueHalo").build(app)?;
 
-    let menu = MenuBuilder::new(app)
+    MenuBuilder::new(app)
         .item(&toggle)
         .separator()
         .item(&region)
@@ -557,7 +544,27 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         .item(&settings)
         .separator()
         .item(&quit)
-        .build()?;
+        .build()
+}
+
+/// Rebuild the tray menu after the user changes shortcuts.
+pub(crate) fn refresh_tray(
+    app: &tauri::AppHandle,
+    hotkeys: &hotkeys::HotkeyConfig,
+) -> Result<(), String> {
+    let tray = app
+        .tray_by_id("truehalo-tray")
+        .ok_or_else(|| "Tray icon is not available".to_string())?;
+    let menu = build_tray_menu(app, hotkeys).map_err(|e| e.to_string())?;
+    tray.set_menu(Some(menu)).map_err(|e| e.to_string())
+}
+
+/// Build the tray icon with the quick actions the overlay needs.
+fn setup_tray(
+    app: &tauri::AppHandle,
+    hotkeys: &hotkeys::HotkeyConfig,
+) -> tauri::Result<()> {
+    let menu = build_tray_menu(app, hotkeys)?;
 
     let mut builder = TrayIconBuilder::with_id("truehalo-tray")
         .menu(&menu)

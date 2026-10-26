@@ -171,6 +171,10 @@ export const tauriApi = {
     await invoke("open_external", { url });
   },
 
+  async setHotkeys(toggle: string, region: string, fullscreen: string): Promise<void> {
+    await invoke("set_hotkeys", { toggle, region, fullscreen });
+  },
+
   // Hotkey events
   async onHotkey(event: string, callback: () => void): Promise<UnlistenFn> {
     return await listen(event, () => callback());

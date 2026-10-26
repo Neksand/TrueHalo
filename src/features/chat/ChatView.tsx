@@ -9,7 +9,7 @@ import {
   TokenUsage,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
-import { HOTKEYS } from "../../lib/hotkeys";
+import { formatHotkey } from "../../lib/hotkeys";
 import { MarkdownRenderer } from "../../components/markdown/MarkdownRenderer";
 import {
   Send,
@@ -89,6 +89,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onRequirePermission,
   permissionGranted,
 }) => {
+  const hotkeys = useMemo(
+    () => ({
+      toggleCompact: formatHotkey(settings.hotkeyToggle, true),
+      toggle: formatHotkey(settings.hotkeyToggle),
+      region: formatHotkey(settings.hotkeyRegion),
+      fullscreen: formatHotkey(settings.hotkeyFullscreen),
+    }),
+    [settings.hotkeyToggle, settings.hotkeyRegion, settings.hotkeyFullscreen],
+  );
+
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => crypto.randomUUID());
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -656,7 +666,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <button
               onClick={handleQuickHide}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-surface-subtle transition-colors"
-              title={`Quick Hide (${HOTKEYS.toggleCompact} or Esc)`}
+              title={`Quick Hide (${hotkeys.toggleCompact} or Esc)`}
             >
               <EyeOff className="w-4 h-4" />
             </button>
@@ -695,7 +705,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 TrueHalo AI Overlay
               </h2>
               <p className="text-xs text-slate-400 leading-relaxed mb-6">
-                Fast AI overlay companion. Press <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">{HOTKEYS.toggle}</kbd> to toggle, or capture screens with <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">{HOTKEYS.region}</kbd>.
+                Fast AI overlay companion. Press <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">{hotkeys.toggle}</kbd> to toggle, or capture screens with <kbd className="px-1 py-0.5 rounded bg-surface-subtle border border-surface-border text-slate-300 font-mono text-[10px]">{hotkeys.region}</kbd>.
               </p>
 
               <div className="grid grid-cols-1 gap-2 w-full text-left">
@@ -704,14 +714,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   className="flex items-center gap-2 p-2.5 rounded-lg border border-surface-border bg-surface-card/60 hover:bg-surface-card hover:border-halo-accent/40 text-xs text-slate-200 transition-all text-left"
                 >
                   <Crop className="w-4 h-4 text-halo-accent shrink-0" />
-                  <span>Capture selected region and analyze ({HOTKEYS.region})</span>
+                  <span>Capture selected region and analyze ({hotkeys.region})</span>
                 </button>
                 <button
                   onClick={() => handleCapture(false)}
                   className="flex items-center gap-2 p-2.5 rounded-lg border border-surface-border bg-surface-card/60 hover:bg-surface-card hover:border-halo-accent/40 text-xs text-slate-200 transition-all text-left"
                 >
                   <Monitor className="w-4 h-4 text-sky-400 shrink-0" />
-                  <span>Capture entire screen ({HOTKEYS.fullscreen})</span>
+                  <span>Capture entire screen ({hotkeys.fullscreen})</span>
                 </button>
                 <button
                   onClick={() => setInputPrompt("Explain how this code works in Rust")}
@@ -912,7 +922,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   ? "text-halo-accent animate-pulse"
                   : "text-slate-400 hover:text-halo-accent hover:bg-surface-subtle"
               }`}
-              title={`Capture region (${HOTKEYS.region})`}
+              title={`Capture region (${hotkeys.region})`}
             >
               <Crop className="w-4 h-4" />
             </button>
@@ -923,7 +933,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               onClick={() => handleCapture(false)}
               disabled={isCapturing}
               className="p-2 rounded-lg text-slate-400 hover:text-sky-400 hover:bg-surface-subtle transition-colors"
-              title={`Capture fullscreen (${HOTKEYS.fullscreen})`}
+              title={`Capture fullscreen (${hotkeys.fullscreen})`}
             >
               <Monitor className="w-4 h-4" />
             </button>
@@ -973,7 +983,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
           <div className="max-w-3xl mx-auto mt-1 px-1 flex justify-between items-center text-[10px] text-slate-500">
             <span>Enter to send · Shift+Enter for newline · Esc to Quick Hide</span>
-            <span>{HOTKEYS.toggleCompact}: Toggle · {HOTKEYS.region}: Region · {HOTKEYS.fullscreen}: Fullscreen</span>
+            <span>{hotkeys.toggleCompact}: Toggle · {hotkeys.region}: Region · {hotkeys.fullscreen}: Fullscreen</span>
           </div>
         </div>
       </div>
