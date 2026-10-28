@@ -91,7 +91,7 @@ if [ "${DO_INSTALL}" = "1" ]; then
     DMG_DIR="$(mktemp -d)"
     cp -R "${APP_PATH}" "${DMG_DIR}/"
     ln -s /Applications "${DMG_DIR}/Applications"
-    hdiutil create -volname "TrueHalo" -srcfolder "${DMG_DIR}" -ov -format UDZO \
+    hdiutil create -volname "TrueHalo" -srcfolder "${DMG_DIR}" -ov -format ULFO \
       "TrueHalo-0.2.2-Installer.dmg" >/dev/null
     rm -rf "${DMG_DIR}"
     ok "DMG: TrueHalo-0.2.2-Installer.dmg"
