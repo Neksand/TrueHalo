@@ -12,51 +12,18 @@ import {
 } from "lucide-react";
 import { tauriApi } from "../../lib/tauri";
 import { ModelInfo, ProviderId } from "../../lib/types";
+import { PROVIDERS, ProviderInfo } from "../../lib/providers";
 
 interface OnboardingWizardProps {
   isOpen: boolean;
   onComplete: (provider: ProviderId, model: string) => void;
 }
 
-interface SetupProvider {
-  id: ProviderId;
-  name: string;
-  blurb: string;
-  keyUrl: string;
-  defaultModel: string;
-  recommended?: boolean;
-}
-
-const PROVIDERS: SetupProvider[] = [
-  {
-    id: "openrouter",
-    name: "OpenRouter",
-    blurb: "One key for hundreds of models, including free ones.",
-    keyUrl: "https://openrouter.ai/keys",
-    defaultModel: "minimax/minimax-m3.1-flash:free",
-    recommended: true,
-  },
-  {
-    id: "gemini",
-    name: "Google Gemini",
-    blurb: "Fast multimodal models from Google AI Studio.",
-    keyUrl: "https://aistudio.google.com/app/apikey",
-    defaultModel: "gemini-1.5-flash",
-  },
-  {
-    id: "openai",
-    name: "OpenAI",
-    blurb: "GPT-4o and the rest of the OpenAI family.",
-    keyUrl: "https://platform.openai.com/api-keys",
-    defaultModel: "gpt-4o",
-  },
-];
-
 const STEPS = ["Provider", "API key", "Model", "Ready"];
 
 export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onComplete }) => {
   const [step, setStep] = useState(0);
-  const [provider, setProvider] = useState<SetupProvider | null>(null);
+  const [provider, setProvider] = useState<ProviderInfo | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
@@ -89,7 +56,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
 
   if (!isOpen) return null;
 
-  const chooseProvider = (next: SetupProvider) => {
+  const chooseProvider = (next: ProviderInfo) => {
     setProvider(next);
     setSelectedModel(next.defaultModel);
     setError(null);

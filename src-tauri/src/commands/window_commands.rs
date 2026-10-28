@@ -127,6 +127,11 @@ pub fn set_hide_from_dock(app: AppHandle, hide: bool) -> Result<bool, String> {
 
         app.set_activation_policy(policy)
             .map_err(|e| e.to_string())?;
+        if hide {
+            // Switching to Accessory orders the window out on macOS; bring it
+            // back so the overlay does not disappear from the screen.
+            crate::overlay::show(&app);
+        }
         tracing::info!("macOS activation policy set, hide_from_dock={}", hide);
         Ok(true)
     }

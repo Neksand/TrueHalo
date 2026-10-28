@@ -144,25 +144,22 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 export const COMPRESSION_PRESETS: Record<
   CompressionPreset,
-  { label: string; maxDimension: number; quality: number; hint: string }
+  { label: string; maxDimension: number; quality: number }
 > = {
   quality: {
     label: "Quality",
     maxDimension: 2048,
     quality: 88,
-    hint: "More detail, larger file",
   },
   balanced: {
     label: "Balanced",
     maxDimension: 1568,
     quality: 80,
-    hint: "Best for reading text and code",
   },
   speed: {
     label: "Speed",
     maxDimension: 1152,
     quality: 60,
-    hint: "Fewest tokens, faster replies",
   },
 };
 

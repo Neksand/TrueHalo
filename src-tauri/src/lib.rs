@@ -249,9 +249,15 @@ pub fn run() {
 
             if hide_from_dock {
                 #[cfg(target_os = "macos")]
-                let _ = app
-                    .handle()
-                    .set_activation_policy(tauri::ActivationPolicy::Accessory);
+                {
+                    let _ = app
+                        .handle()
+                        .set_activation_policy(tauri::ActivationPolicy::Accessory);
+                    // An Accessory app has no Dock entry, and switching the policy
+                    // can order the window out. Show it explicitly so a restart
+                    // never leaves TrueHalo running invisibly.
+                    show_overlay(app.handle());
+                }
             }
 
             if always_on_top {

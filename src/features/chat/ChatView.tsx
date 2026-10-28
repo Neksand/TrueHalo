@@ -13,6 +13,7 @@ import {
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey } from "../../lib/hotkeys";
 import { BUILT_IN_ACTIONS } from "../../lib/quickActions";
+import { costForTokens, formatUsd } from "../../lib/pricing";
 import { MarkdownRenderer } from "../../components/markdown/MarkdownRenderer";
 import {
   Send,
@@ -38,7 +39,6 @@ import {
   Pencil,
   FileText,
   FileJson,
-  Scale,
 } from "lucide-react";
 import logoImg from "../../assets/logo.png";
 
@@ -101,14 +101,6 @@ const contentToText = (contentJson: string): string => {
 
 const exportTimestamp = (value: number): string => new Date(value).toLocaleString();
 
-/** `—` means the provider did not report a price for this model. */
-const formatCost = (value: number | null): string => {
-  if (value === null) return "—";
-  if (value === 0) return "$0.00";
-  if (value < 0.01) return `$${value.toFixed(5)}`;
-  return `$${value.toFixed(4)}`;
-};
-
 export const ChatView: React.FC<ChatViewProps> = ({
   activeProvider,
   activeModel,
@@ -143,7 +135,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [inputPrompt, setInputPrompt] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentStreamId, setCurrentStreamId] = useState<string | null>(null);
-  const [compareMode, setCompareMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,6 +142,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [renameValue, setRenameValue] = useState("");
   const [toast, setToast] = useState<{ text: string; detail?: string } | null>(null);
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPricing>>({});
+  const [modelVision, setModelVision] = useState<Record<string, boolean>>({});
 
   const [isCapturing, setIsCapturing] = useState(false);
   const [attachedImage, setAttachedImage] = useState<{
@@ -196,21 +188,24 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // Provider catalogs are the only honest source of prices. A model without a
-  // reported price is shown as "—" instead of an invented number.
+  // Provider catalogs are the only honest source of prices and vision support.
+  // A model without a reported price is shown as "—" instead of a guessed number.
   useEffect(() => {
     let cancelled = false;
     const loadPrices = async () => {
       const providers: ProviderId[] = ["openrouter", "gemini", "openai"];
       const entries: Array<[string, ModelPricing]> = [];
+      const vision: Record<string, boolean> = {};
       await Promise.all(
         providers.map(async (provider) => {
           try {
             if (!(await tauriApi.hasApiKey(provider))) return;
             const models = await tauriApi.listModels(provider);
             for (const model of models) {
+              const key = `${provider}:${model.id}`;
+              vision[key] = model.supports_vision;
               if (model.pricing) {
-                entries.push([`${provider}:${model.id}`, model.pricing]);
+                entries.push([key, model.pricing]);
               }
             }
           } catch {
@@ -218,7 +213,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
           }
         }),
       );
-      if (!cancelled) setModelPrices(Object.fromEntries(entries));
+      if (!cancelled) {
+        setModelPrices(Object.fromEntries(entries));
+        setModelVision(vision);
+      }
     };
     void loadPrices();
     return () => {
@@ -362,27 +360,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
     );
   }, [messages]);
 
-  const pricePerToken = useCallback((value?: string): number | null => {
-    if (!value) return null;
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }, []);
-
   const costForUsage = useCallback(
     (usage?: TokenUsage): number | null => {
       if (!usage?.total_tokens) return null;
       const key = `${usage.provider ?? activeProvider}:${usage.model ?? activeModel}`;
-      const pricing = modelPrices[key];
-      if (!pricing) return null;
-      const promptPrice = pricePerToken(pricing.prompt);
-      const completionPrice = pricePerToken(pricing.completion);
-      if (promptPrice === null || completionPrice === null) return null;
-      return (
-        (usage.prompt_tokens ?? 0) * promptPrice +
-        (usage.completion_tokens ?? 0) * completionPrice
+      return costForTokens(
+        usage.prompt_tokens ?? 0,
+        usage.completion_tokens ?? 0,
+        modelPrices[key],
       );
     },
-    [modelPrices, activeProvider, activeModel, pricePerToken],
+    [modelPrices, activeProvider, activeModel],
   );
 
   // undefined = no usage yet, null = at least one price is unknown.
@@ -540,6 +528,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const trimmed = (overridePrompt ?? inputPrompt).trim();
     const ocrText = extractedText?.trim() ?? "";
     if ((!trimmed && !attachedImage && !ocrText) || isStreaming) return;
+
+    // Sending a screenshot to a text-only model always fails with a provider
+    // error, so catch it before the request leaves the app.
+    if (attachedImage && modelVision[`${activeProvider}:${activeModel}`] === false) {
+      setErrorMessage(
+        `"${activeModel}" cannot read images. Pick a vision model in Settings, or use Text/OCR mode.`,
+      );
+      return;
+    }
 
     setErrorMessage(null);
     const contentParts: ContentPart[] = [];
@@ -978,7 +975,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 title={`Prompt: ${sessionUsage.prompt_tokens ?? 0} · Completion: ${sessionUsage.completion_tokens ?? 0}`}
               >
                 Σ {sessionUsage.total_tokens.toLocaleString("en-US")} tok
-                {sessionCost !== undefined && ` · ${formatCost(sessionCost)}`}
+                {sessionCost !== undefined && ` · ${formatUsd(sessionCost)}`}
               </span>
             ) : null}
 
@@ -1161,7 +1158,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             title="Estimated from the provider's list price"
                           >
                             · {message.usage.total_tokens.toLocaleString("en-US")} tok ·{" "}
-                            {formatCost(costForUsage(message.usage))}
+                            {formatUsd(costForUsage(message.usage))}
                           </span>
                         ) : null}
                       </div>
@@ -1233,30 +1230,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <p className="text-[10px] text-slate-500 mt-1">
               Recognized on-device. Only this text is sent — the screenshot is discarded.
             </p>
-          </div>
-        )}
-
-        {/* Model compare split view */}
-        {compareMode && (
-          <div className="mx-4 mb-3 rounded-xl border border-halo-accent/30 bg-gradient-to-r from-surface-card/60 to-surface-card/40 p-3 space-y-3 shadow-halo-sm">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-slate-100">Compare</span>
-              <button onClick={() => setCompareMode(false)} className="text-[10px] text-slate-400 hover:text-slate-200">Close compare</button>
-            </div>
-            <div className="grid grid-cols-2 gap-3 text-[11px]">
-              <div className="rounded-lg border border-surface-border bg-surface-deep/40 p-2.5">
-                <div className="font-medium text-slate-200 mb-1">Side A — current model</div>
-                <div className="text-slate-400">Active response stream</div>
-              </div>
-              <div className="rounded-lg border border-surface-border bg-surface-deep/40 p-2.5">
-                <div className="font-medium text-slate-200 mb-1">Side B — compare model</div>
-                <div className="text-slate-400">Parallel stream</div>
-              </div>
-            </div>
-            <div className="flex gap-2 text-[10px]">
-              <button onClick={() => setCompareMode(false)} className="flex-1 py-1.5 rounded-lg bg-halo-accent/80 hover:bg-halo-accent text-white font-medium transition-colors">Run compare</button>
-              <button onClick={() => setCompareMode(false)} className="px-3 py-1.5 rounded-lg border border-surface-border text-slate-400 hover:text-slate-200 transition-colors">Cancel</button>
-            </div>
           </div>
         )}
 
@@ -1369,16 +1342,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
               title={`Capture fullscreen (${hotkeys.fullscreen})`}
             >
               <Monitor className="w-4 h-4" />
-            </button>
-
-            {/* Compare mode toggle */}
-            <button
-              type="button"
-              onClick={() => setCompareMode(!compareMode)}
-              className={`p-2 rounded-lg transition-colors ${compareMode ? "text-halo-accent bg-halo-accent/15" : "text-slate-400 hover:text-violet-400 hover:bg-surface-subtle"}`}
-              title="Compare two models"
-            >
-              <Scale className="w-4 h-4" />
             </button>
 
             {/* Attach local file button */}

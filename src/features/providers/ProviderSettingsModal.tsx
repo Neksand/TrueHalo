@@ -14,6 +14,8 @@ import {
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey, IS_WINDOWS } from "../../lib/hotkeys";
 import { BUILT_IN_ACTIONS } from "../../lib/quickActions";
+import { PROVIDERS } from "../../lib/providers";
+import { costForTokens, formatUsd } from "../../lib/pricing";
 import {
   Key,
   Shield,
@@ -52,34 +54,6 @@ interface ProviderSettingsModalProps {
   customActions: QuickAction[];
   onChangeCustomActions: (actions: QuickAction[]) => void;
 }
-
-const PROVIDERS: {
-  id: ProviderId;
-  name: string;
-  defaultModel: string;
-  docsUrl: string;
-  loginUrl?: string;
-}[] = [
-  {
-    id: "openrouter",
-    name: "OpenRouter",
-    defaultModel: "minimax/minimax-m3.1-flash:free",
-    docsUrl: "https://openrouter.ai/keys",
-  },
-  {
-    id: "gemini",
-    name: "Google Gemini",
-    defaultModel: "gemini-1.5-flash",
-    docsUrl: "https://aistudio.google.com/app/apikey",
-  },
-  {
-    id: "openai",
-    name: "OpenAI (ChatGPT)",
-    defaultModel: "gpt-4o",
-    docsUrl: "https://platform.openai.com/api-keys",
-    loginUrl: "https://platform.openai.com/account/api-keys",
-  },
-];
 
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
 
@@ -176,40 +150,6 @@ const HotkeyRow: React.FC<{
     <HotkeyRecorder value={value} defaultValue={defaultValue} onChange={onChange} />
   </div>
 );
-
-/** `—` means the provider did not report a price for this model. */
-const formatUsd = (value: number | null): string => {
-  if (value === null) return "—";
-  if (value === 0) return "$0.00";
-  if (value < 0.01) return `$${value.toFixed(5)}`;
-  return `$${value.toFixed(4)}`;
-};
-
-const pricePerToken = (value?: string): number | null => {
-  if (!value) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const usageCost = (
-  promptTokens: number,
-  completionTokens: number,
-  pricing?: ModelPricing | null,
-): number | null => {
-  if (!pricing) return null;
-  const promptPrice = pricePerToken(pricing.prompt);
-  const completionPrice = pricePerToken(pricing.completion);
-  if (promptPrice === null || completionPrice === null) return null;
-  return promptTokens * promptPrice + completionTokens * completionPrice;
-};
-
-const usageDayKey = (ts: number): string => {
-  const date = new Date(ts);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
-};
-
 
 export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   isOpen,
@@ -409,7 +349,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     : 0;
 
   const usageRowCost = (row: UsageRow): number | null =>
-    usageCost(
+    costForTokens(
       row.prompt_tokens,
       row.completion_tokens,
       modelPrices[`${row.provider}:${row.model}`],
@@ -425,23 +365,6 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       if (cost === null) unknown = true;
       else total += cost;
     }
-    return unknown ? null : total;
-  }, [usage, modelPrices]);
-
-  const usageTodayCost = useMemo((): number | null => {
-    if (!usage) return null;
-    const todayKey = usageDayKey(Date.now());
-    let total: number | null = 0;
-    let seen = false;
-    let unknown = false;
-    for (const row of usage.rows) {
-      if (usageDayKey(row.last_used) !== todayKey) continue;
-      seen = true;
-      const cost = usageRowCost(row);
-      if (cost === null) unknown = true;
-      else total += cost;
-    }
-    if (!seen) return 0;
     return unknown ? null : total;
   }, [usage, modelPrices]);
 
@@ -597,7 +520,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                       OpenAI / ChatGPT account sign-in
                     </span>
                     <button
-                      onClick={() => handleOpenExternal(currentProviderInfo.loginUrl || currentProviderInfo.docsUrl)}
+                      onClick={() => handleOpenExternal(currentProviderInfo.keyUrl)}
                       className="flex items-center gap-1 text-[11px] text-sky-300 hover:text-sky-100 bg-sky-900/40 hover:bg-sky-800/60 px-2.5 py-1 rounded-lg border border-sky-700/50 transition-colors"
                     >
                       <span>Open OpenAI API keys</span>
@@ -627,7 +550,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                     <p className="text-slate-400 text-[11px] mt-0.5">
                       Get a key in the{" "}
                       <button
-                        onClick={() => handleOpenExternal(currentProviderInfo.docsUrl)}
+                        onClick={() => handleOpenExternal(currentProviderInfo.keyUrl)}
                         className="text-halo-400 hover:underline"
                       >
                         {currentProviderInfo.name}
@@ -837,8 +760,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                         {usageTodayTokens.toLocaleString("en-US")}
                       </div>
                       <div className="text-xs text-slate-400">
-                        tokens ·{" "}
-                        <span className="font-mono text-slate-200">{formatUsd(usageTodayCost)}</span>
+                        tokens · {usage.today.responses}{" "}
+                        {usage.today.responses === 1 ? "response" : "responses"}
                       </div>
                     </div>
                     <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/40 space-y-1.5">

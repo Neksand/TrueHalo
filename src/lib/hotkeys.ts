@@ -12,15 +12,6 @@ export const IS_WINDOWS =
 
 const isWindows = IS_WINDOWS;
 
-export const HOTKEYS = {
-  /** Compact form for inline hints: "⌥Space" / "Alt+Space". */
-  toggleCompact: isWindows ? "Alt+Space" : "⌥Space",
-  /** Spaced form for <kbd> elements: "⌥ Space" / "Alt+Space". */
-  toggle: isWindows ? "Alt+Space" : "⌥ Space",
-  region: isWindows ? "Alt+Shift+2" : "⌥⇧2",
-  fullscreen: isWindows ? "Alt+Shift+3" : "⌥⇧3",
-} as const;
-
 /**
  * Format a stored Tauri accelerator for display.
  *

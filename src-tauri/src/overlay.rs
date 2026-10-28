@@ -64,7 +64,12 @@ fn ns_application() -> *mut std::ffi::c_void {
     }
 }
 
-/// Show the overlay and bring TrueHalo to the front.
+/// Show the overlay without stealing keyboard focus from the app underneath.
+///
+/// `activateIgnoringOtherApps` + `makeKeyAndOrderFront` activated TrueHalo and
+/// pulled focus away from the window the user was working in. The overlay is
+/// meant to appear on top while the other app keeps focus; clicking the overlay
+/// still focuses it the normal way.
 pub fn show(app: &AppHandle) {
     OVERLAY_VISIBLE.store(true, Ordering::Relaxed);
 
@@ -74,17 +79,16 @@ pub fn show(app: &AppHandle) {
         on_main(app, move || unsafe {
             let ns_app = ns_application();
             if !ns_app.is_null() {
+                // A hidden app must be unhidden first, otherwise the window
+                // cannot be ordered in at all.
                 crate::macos::send(ns_app, "unhide:", std::ptr::null_mut());
-                crate::macos::send(
-                    ns_app,
-                    "activateIgnoringOtherApps:",
-                    std::ptr::without_provenance_mut(1),
-                );
             }
 
             if let Some(window) = app_handle.get_webview_window("main") {
                 if let Ok(ns_window) = window.ns_window() {
-                    crate::macos::send(ns_window, "makeKeyAndOrderFront:", std::ptr::null_mut());
+                    // Order the window to the front without making TrueHalo the
+                    // active app: focus stays where the user left it.
+                    crate::macos::send(ns_window, "orderFrontRegardless", std::ptr::null_mut());
                 }
             }
         });
