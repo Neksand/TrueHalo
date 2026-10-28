@@ -12,7 +12,7 @@ Press a hotkey, grab a region, and get an answer in a floating window — in any
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](https://www.rust-lang.org)
 [![Release](https://img.shields.io/github/v/release/Neksand/TrueHalo?color=fbbf24&label=release)](https://github.com/Neksand/TrueHalo/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20arm64%20%7C%20Windows%20x64-111827)](#platform-support)
-[![Size](https://img.shields.io/badge/app-21%20MB-fbbf24)](#why-truehalo-is-small)
+[![Size](https://img.shields.io/badge/app-9%20MB-fbbf24)](#why-truehalo-is-small)
 
 [Watch the demo](#watch-the-demo) · [Features](#features) · [Install](#install) · [Comparison](#truehalo-vs-cheating-daddy) · [Roadmap](#roadmap)
 
@@ -69,15 +69,15 @@ window. TrueHalo is written in Rust and uses the WebView that your operating sys
   <rect x="230" y="60" width="570" height="22" rx="11" fill="#334155"/>
   <text x="812" y="76" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" text-anchor="end">200+ MB</text>
   <text x="28" y="116" fill="#f8fafc" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="600">TrueHalo</text>
-  <rect x="230" y="102" width="68" height="22" rx="11" fill="#fbbf24"/>
-  <text x="314" y="118" fill="#fbbf24" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700">21 MB</text>
+  <rect x="230" y="102" width="32" height="22" rx="11" fill="#fbbf24"/>
+  <text x="278" y="118" fill="#fbbf24" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700">9 MB</text>
 </svg>
 </p>
 
 | | Typical Electron overlay | TrueHalo |
 |---|---|---|
-| Download | 200+ MB | **9.8 MB DMG · 5.1 MB EXE** |
-| Installed app | 300–500 MB | **~21 MB** |
+| Download | 200+ MB | **6.8 MB DMG · 3.8 MB EXE** |
+| Installed app | 300–500 MB | **~9 MB** |
 | Runtime | bundled Chromium | the system WebView |
 | Idle memory | hundreds of MB | a fraction of that |
 | Cold start | seconds | almost instant |
@@ -138,7 +138,7 @@ providers, and no continuous audio or screen capture.
 | | Cheating Daddy | TrueHalo |
 |---|---|---|
 | Runtime | Electron | Tauri 2 (Rust + system WebView) |
-| Download | Electron bundle | **9.8 MB DMG · 5.1 MB EXE** |
+| Download | Electron bundle | **6.8 MB DMG · 3.8 MB EXE** |
 | AI providers | Google Gemini Live | OpenRouter · Google Gemini · OpenAI |
 | Screen analysis | continuous during a session | on demand, per hotkey |
 | Audio capture | system audio + microphone | not included, by design |
