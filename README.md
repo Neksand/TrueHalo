@@ -30,6 +30,11 @@ Press a hotkey, grab a region, and get an answer in a floating window — in any
   <sub>▶ <a href="docs/media/truehalo-launch.mp4"><b>Watch the 37-second launch film</b></a> (1080p, with sound)</sub>
 </p>
 
+> **Not a cheating tool.** TrueHalo is a lightweight productivity overlay: it answers only what you
+> explicitly ask about, one screenshot at a time. The window-exclusion feature exists for privacy —
+> the same reason API keys stay in the system credential store and the app never sends telemetry.
+> Do not use it to misrepresent your work where independent performance is required.
+
 ## What is TrueHalo?
 
 TrueHalo is a small desktop app that sits on top of everything you do. When you need help with
