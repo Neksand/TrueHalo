@@ -113,6 +113,42 @@ pub fn show(app: &AppHandle) {
     }
 }
 
+/// Show the overlay and activate TrueHalo.
+///
+/// Used for explicit requests such as opening Settings from the tray, where
+/// taking keyboard focus is expected. The hotkey path keeps `show()`, which
+/// deliberately does not activate the app.
+pub fn show_focused(app: &AppHandle) {
+    OVERLAY_VISIBLE.store(true, Ordering::Relaxed);
+
+    #[cfg(target_os = "macos")]
+    {
+        let app_handle = app.clone();
+        on_main(app, move || unsafe {
+            let ns_app = ns_application();
+            if !ns_app.is_null() {
+                crate::macos::send(ns_app, "unhide:", std::ptr::null_mut());
+                crate::macos::send(
+                    ns_app,
+                    "activateIgnoringOtherApps:",
+                    std::ptr::without_provenance_mut(1),
+                );
+            }
+            if let Some(window) = app_handle.get_webview_window("main") {
+                if let Ok(ns_window) = window.ns_window() {
+                    crate::macos::send(ns_window, "makeKeyAndOrderFront:", std::ptr::null_mut());
+                }
+            }
+        });
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 /// Hide the overlay (including the menu bar/dock activation) without closing it.
 pub fn hide(app: &AppHandle) {
     OVERLAY_VISIBLE.store(false, Ordering::Relaxed);

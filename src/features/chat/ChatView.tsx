@@ -4,6 +4,7 @@ import {
   ChatMessage,
   COMPRESSION_PRESETS,
   ContentPart,
+  ModelInfo,
   ModelPricing,
   ProviderId,
   QuickAction,
@@ -188,41 +189,37 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  // Provider catalogs are the only honest source of prices and vision support.
-  // A model without a reported price is shown as "—" instead of a guessed number.
+  // Prices and vision support come from the catalog cached by Settings.
+  // Nothing here reads the Keychain, so startup never raises the macOS
+  // password dialog.
   useEffect(() => {
     let cancelled = false;
     const loadPrices = async () => {
-      const providers: ProviderId[] = ["openrouter", "gemini", "openai"];
       const entries: Array<[string, ModelPricing]> = [];
       const vision: Record<string, boolean> = {};
-      await Promise.all(
-        providers.map(async (provider) => {
-          try {
-            if (!(await tauriApi.hasApiKey(provider))) return;
-            const models = await tauriApi.listModels(provider);
-            for (const model of models) {
-              const key = `${provider}:${model.id}`;
-              vision[key] = model.supports_vision;
-              if (model.pricing) {
-                entries.push([key, model.pricing]);
-              }
-            }
-          } catch {
-            // Missing key or offline catalog: costs stay unknown for this provider.
+      try {
+        const cached = await tauriApi.getPreference(`catalog:${activeProvider}`);
+        const models = cached ? (JSON.parse(cached) as ModelInfo[]) : [];
+        for (const model of models) {
+          const key = `${activeProvider}:${model.id}`;
+          vision[key] = model.supports_vision;
+          if (model.pricing) {
+            entries.push([key, model.pricing]);
           }
-        }),
-      );
+        }
+      } catch {
+        // No cache yet: costs stay unknown until Settings loads the catalog.
+      }
       if (!cancelled) {
-        setModelPrices(Object.fromEntries(entries));
-        setModelVision(vision);
+        setModelPrices((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+        setModelVision((prev) => ({ ...prev, ...vision }));
       }
     };
     void loadPrices();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeProvider]);
 
   const handleCapture = useCallback(
     async (interactive: boolean) => {

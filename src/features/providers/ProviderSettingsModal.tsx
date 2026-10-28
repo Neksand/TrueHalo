@@ -215,19 +215,40 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     void loadUsage();
   }, [isOpen, loadUsage]);
 
-  // Provider catalogs are the only honest source of prices. Models without a
-  // reported price keep their costs unknown ("—") instead of inventing numbers.
+  // Catalog prices are only needed by the Usage tab. Loading them eagerly made
+  // every Settings open read the API key from the Keychain, which can raise the
+  // macOS password dialog and freeze the window while it is up.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || activeTab !== "usage" || !usage) return;
+    const providers = Array.from(new Set(usage.rows.map((row) => row.provider))).filter(
+      (provider): provider is ProviderId =>
+        provider === "openrouter" || provider === "gemini" || provider === "openai",
+    );
+    if (providers.length === 0) return;
+
     let cancelled = false;
     const loadPrices = async () => {
       const entries: Array<[string, ModelPricing]> = [];
-      const providers: ProviderId[] = ["openrouter", "gemini", "openai"];
       await Promise.all(
         providers.map(async (provider) => {
           try {
-            if (!(await tauriApi.hasApiKey(provider))) return;
-            const models = await tauriApi.listModels(provider);
+            const cached = await tauriApi.getPreference(`catalog:${provider}`);
+            let models: ModelInfo[] | null = null;
+            if (cached) {
+              try {
+                models = JSON.parse(cached) as ModelInfo[];
+              } catch {
+                models = null;
+              }
+            }
+            if (!models) {
+              if (!(await tauriApi.hasApiKey(provider))) return;
+              models = await tauriApi.listModels(provider);
+              await tauriApi.setPreference(
+                `catalog:${provider}`,
+                JSON.stringify(models),
+              );
+            }
             for (const model of models) {
               if (model.pricing) {
                 entries.push([`${provider}:${model.id}`, model.pricing]);
@@ -244,16 +265,35 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen]);
+  }, [isOpen, activeTab, usage]);
 
   const checkKeyStatus = async (provider: ProviderId) => {
     setMessage(null);
-    const keyExists = await tauriApi.hasApiKey(provider);
-    setHasKey(keyExists);
-    if (keyExists) {
-      fetchModels(provider);
-    } else {
+    try {
+      const keyExists = await tauriApi.hasApiKey(provider);
+      setHasKey(keyExists);
+      if (!keyExists) {
+        setModels([]);
+        return;
+      }
+      // Prefer the cached catalog: reading it does not touch the Keychain.
+      const cached = await tauriApi.getPreference(`catalog:${provider}`);
+      if (cached) {
+        try {
+          setModels(JSON.parse(cached) as ModelInfo[]);
+          return;
+        } catch {
+          // Corrupt cache: fall through to a fresh fetch.
+        }
+      }
+      await fetchModels(provider);
+    } catch {
+      setHasKey(false);
       setModels([]);
+      setMessage({
+        type: "error",
+        text: "Could not read the API key from the keychain. Open the Privacy tab → Fix, then try again.",
+      });
     }
   };
 
@@ -262,6 +302,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     try {
       const list = await tauriApi.listModels(provider);
       setModels(list);
+      await tauriApi.setPreference(`catalog:${provider}`, JSON.stringify(list));
     } catch (err: any) {
       setMessage({
         type: "error",

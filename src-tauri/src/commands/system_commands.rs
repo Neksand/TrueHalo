@@ -15,6 +15,12 @@ pub fn open_external(url: String) -> Result<(), String> {
     open::that(trimmed).map_err(|e| e.to_string())
 }
 
+/// Record a frontend exception in the native log so a blank UI leaves a trace.
+#[command]
+pub fn log_frontend_error(message: String) {
+    tracing::error!("frontend error: {}", message);
+}
+
 /// Replace all three global shortcuts atomically.
 ///
 /// The old set is restored if the OS refuses one of the new shortcuts, so a

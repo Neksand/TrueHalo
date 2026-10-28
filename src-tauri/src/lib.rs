@@ -117,6 +117,14 @@ fn show_overlay(app: &tauri::AppHandle) {
     }
 }
 
+/// Show the overlay and take focus — for explicit requests such as Settings.
+fn show_overlay_focused(app: &tauri::AppHandle) {
+    if let Some(window) = ensure_main_window(app) {
+        let _ = window.unminimize();
+        crate::overlay::show_focused(app);
+    }
+}
+
 /// Toggle the overlay window visibility.
 pub(crate) fn toggle_overlay_window(app: &tauri::AppHandle) {
     // Debounce duplicated shortcut events (key repeat, plugin double-fires).
@@ -308,6 +316,7 @@ pub fn run() {
             capture_commands::restart_app,
             // System
             system_commands::open_external,
+            system_commands::log_frontend_error,
             system_commands::set_hotkeys,
             // SQLite Storage & Preferences
             storage_commands::list_sessions,
@@ -589,7 +598,7 @@ fn setup_tray(
                 let _ = app.emit("hotkey:capture-fullscreen", ());
             }
             "settings" => {
-                show_overlay(app);
+                show_overlay_focused(app);
                 let _ = app.emit("ui:open-settings", ());
             }
             "quit" => app.exit(0),

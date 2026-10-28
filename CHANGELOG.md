@@ -8,6 +8,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Settings, onboarding and permission dialogs no longer blank the window on macOS. The full-screen scrim uses a solid tint instead of `backdrop-filter`, which broke compositing of the transparent window and left only the native traffic lights visible.
+- Settings no longer freezes or blanks while macOS asks for the Keychain password. Keychain commands run off the main thread, the model catalog is cached in preferences, and catalogs are fetched only from Settings — startup never reads the API key.
+- A UI render error now shows a visible fallback and writes the details to the native log instead of leaving an empty window.
+- Opening Settings from the tray now activates the window; the hotkey still shows the overlay without stealing focus.
 
 ## [0.2.1] — 2026-10-28
 

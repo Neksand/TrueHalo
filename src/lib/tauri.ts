@@ -189,6 +189,10 @@ export const tauriApi = {
     await invoke("open_external", { url });
   },
 
+  async logFrontendError(message: string): Promise<void> {
+    await invoke("log_frontend_error", { message });
+  },
+
   async setHotkeys(toggle: string, region: string, fullscreen: string): Promise<void> {
     await invoke("set_hotkeys", { toggle, region, fullscreen });
   },
