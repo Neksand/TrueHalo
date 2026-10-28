@@ -104,7 +104,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
       <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-xl shadow-halo overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-surface-border bg-surface-subtle/40">

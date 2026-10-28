@@ -57,7 +57,7 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
       <div className="bg-surface-card border border-surface-border rounded-xl w-full max-w-lg shadow-halo overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         <div
           data-tauri-drag-region="deep"
