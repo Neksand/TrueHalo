@@ -373,8 +373,6 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   const currentProviderInfo = PROVIDERS.find((p) => p.id === selectedProvider)!;
   const filteredModels = models.filter(
     (m) =>
@@ -417,6 +415,10 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     [usage],
   );
 
+  // Every hook above runs on each render: returning early before a hook was
+  // what triggered React error #310 ("rendered more hooks than during the
+  // previous render") and left Settings blank.
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
