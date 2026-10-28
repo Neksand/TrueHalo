@@ -12,7 +12,7 @@ Press a hotkey, grab a region, and get an answer in a floating window — in any
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](https://www.rust-lang.org)
 [![Release](https://img.shields.io/github/v/release/Neksand/TrueHalo?color=fbbf24&label=release)](https://github.com/Neksand/TrueHalo/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20arm64%20%7C%20Windows%20x64-111827)](#platform-support)
-[![Size](https://img.shields.io/badge/app-19%20MB-fbbf24)](#why-truehalo-is-small)
+[![Size](https://img.shields.io/badge/app-21%20MB-fbbf24)](#why-truehalo-is-small)
 
 [Watch the demo](#watch-the-demo) · [Features](#features) · [Install](#install) · [Comparison](#truehalo-vs-cheating-daddy) · [Roadmap](#roadmap)
 
@@ -45,6 +45,17 @@ It is **not** a background recorder or an always-listening assistant:
 Typical uses: debugging code, reading dense documentation, understanding dashboards, translating an
 error message, or summarising a long page you are allowed to look at.
 
+## What's new in 0.2.2
+
+Current release: **0.2.2** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
+
+- **First-run setup wizard** — pick a provider, paste the key, choose a model, send a test request.
+- **Customizable hotkeys** — toggle / region / fullscreen can be re-recorded in Settings; conflicts roll back.
+- **History and export** — search, rename, Markdown and JSON export; everything stays in local SQLite.
+- **Local OCR text mode** — on-device text recognition (macOS Vision, Windows OCR) with an editable preview before sending; falls back to the image when no text is found.
+- **Quick Actions** — one-click prompts (Explain, Summarize, Translate, Fix code, Extract text, What's wrong?) plus your own custom actions stored locally.
+- **Cost dashboard** — a Usage tab with today/all-time token counts, estimated cost from the provider catalogs ("—" when a price is unknown), per-model rows and a 7-day chart.
+
 ## Why TrueHalo is small
 
 Most AI overlays are Electron apps: they ship a whole Chromium browser (200+ MB) just to draw one
@@ -59,14 +70,14 @@ window. TrueHalo is written in Rust and uses the WebView that your operating sys
   <text x="812" y="76" fill="#cbd5e1" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" text-anchor="end">200+ MB</text>
   <text x="28" y="116" fill="#f8fafc" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="600">TrueHalo</text>
   <rect x="230" y="102" width="68" height="22" rx="11" fill="#fbbf24"/>
-  <text x="314" y="118" fill="#fbbf24" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700">19 MB</text>
+  <text x="314" y="118" fill="#fbbf24" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700">21 MB</text>
 </svg>
 </p>
 
 | | Typical Electron overlay | TrueHalo |
 |---|---|---|
-| Download | 200+ MB | **9 MB DMG · 4.7 MB EXE** |
-| Installed app | 300–500 MB | **~19 MB** |
+| Download | 200+ MB | **9.8 MB DMG · 5.1 MB EXE** |
+| Installed app | 300–500 MB | **~21 MB** |
 | Runtime | bundled Chromium | the system WebView |
 | Idle memory | hundreds of MB | a fraction of that |
 | Cold start | seconds | almost instant |
@@ -87,17 +98,25 @@ window. TrueHalo is written in Rust and uses the WebView that your operating sys
 
 ### Ask about anything on screen
 - **Two capture modes.** Select a region (`⌥⇧2` on macOS, `Alt+Shift+2` on Windows) or grab the whole
-  screen (`⌥⇧3` / `Alt+Shift+3`).
+  screen (`⌥⇧3` / `Alt+Shift+3`). Shortcuts can be re-recorded in Settings → Shortcuts.
 - **Works over any app.** The overlay floats above your work and can be moved by its header.
 - **Images are compressed locally** before they are sent, so uploads stay small (a Retina screenshot
   usually drops from 10–20 MB to under 1 MB).
+- **Local OCR text mode.** Settings → Screenshot input offers Auto / Text only / Image only. Text is
+  recognized on-device, shown in an editable preview, and only the text is sent — cheaper and faster
+  than an image. If no text is found, the screenshot is sent instead.
 
 ### Chat that feels native
+- **Setup wizard** — first launch walks through provider → API key → model → test request.
 - **Streaming answers** — text appears as the model writes it; stop it any time with `Esc`.
 - **Three providers, one UI** — OpenRouter, Google Gemini and OpenAI, with a live model list.
 - **Vision models** — screenshots are sent as images to models such as Claude, Gemini and GPT-4o.
-- **Token counter** — see usage per message and per session; old screenshots are replaced with a
-  short placeholder so you do not pay for the same image twice.
+  Text-only models are blocked before the request with a clear message.
+- **Quick Actions** — one-click prompts with a system instruction each; add your own actions,
+  stored locally.
+- **Token counter and cost** — see usage per message, per session and in the Usage tab; old
+  screenshots are replaced with a short placeholder so you do not pay for the same image twice.
+- **History** — conversations persist in local SQLite; search, rename, export to Markdown or JSON.
 
 ### Built for a window that floats on top
 - **Real transparency** — the opacity slider (5–100 %) changes the actual window alpha.
@@ -119,7 +138,7 @@ providers, and no continuous audio or screen capture.
 | | Cheating Daddy | TrueHalo |
 |---|---|---|
 | Runtime | Electron | Tauri 2 (Rust + system WebView) |
-| Download | Electron bundle | **9 MB DMG · 4.7 MB EXE** |
+| Download | Electron bundle | **9.8 MB DMG · 5.1 MB EXE** |
 | AI providers | Google Gemini Live | OpenRouter · Google Gemini · OpenAI |
 | Screen analysis | continuous during a session | on demand, per hotkey |
 | Audio capture | system audio + microphone | not included, by design |
@@ -187,7 +206,7 @@ instead of drawing a black rectangle in recordings.
 
 1. Click the gear icon → **AI Providers & Models**.
 2. Paste an API key for a provider you already use:
-   [OpenRouter](https://openrouter.ai/keys) · [Google AI Studio](https://aistudio.google.com/app/apikey) ·
+   [OpenRouter](https://openrouter.ai/settings/keys) · [Google AI Studio](https://aistudio.google.com/app/apikey) ·
    [OpenAI](https://platform.openai.com/api-keys).
 3. Press **Save**. The key goes into the system credential store, not into a config file.
 4. Pick a model, close Settings, and press `⌥Space` / `Alt+Space` to show the overlay.
@@ -242,7 +261,8 @@ streaming core are identical on both systems.
 | macOS: *"TrueHalo is damaged and can't be opened"* | `xattr -dr com.apple.quarantine /Applications/TrueHalo.app`, then open again |
 | macOS: no **Open Anyway** button | Launch the app once, then reopen Privacy & Security; or use the Terminal command above |
 | macOS asks for Screen Recording again after an update | System Settings → Privacy & Security → toggle TrueHalo off and on → restart the app |
-| macOS asks for a password when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once) |
+| macOS asks for a password when opening Settings | Settings → Screen Recording & Privacy → **Fix** (choose **Always Allow** once). Since 0.2.2 the model list is cached, so a normal start no longer reads the keychain |
+| Settings or the window shows an error instead of content | Details are written to `~/Library/Logs/TrueHalo/truehalo.log` (`frontend error: …`); paste that line into an issue |
 | Windows: *"Windows protected your PC"* | SmartScreen → **More info** → **Run anyway** |
 | Windows: a black box appears where the overlay was | Keep **Hide the window from other screen recordings** on — the overlay then stays fully opaque. Older builds (< Windows 10 2004) cannot exclude a window at all, so the switch stays off |
 | Windows: a DRM-protected video captures as black | Protected video surfaces cannot be captured by any screen recorder |
@@ -259,6 +279,12 @@ Shipped:
 - [x] Three providers with a live model catalog
 - [x] Region / full-screen capture with local compression
 - [x] System credential storage and capture exclusion
+- [x] First-run setup wizard
+- [x] Customizable global shortcuts with conflict rollback
+- [x] History: search, rename, Markdown/JSON export
+- [x] Local OCR text mode with editable preview and image fallback
+- [x] Built-in and custom Quick Actions
+- [x] Usage tab with token counts, estimated cost and a 7-day chart
 
 Next, in order of expected impact:
 
