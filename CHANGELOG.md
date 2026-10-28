@@ -4,6 +4,11 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-10-29
+
+### Fixed
+- Settings, onboarding and permission dialogs no longer blank the window on macOS. The full-screen scrim uses a solid tint instead of `backdrop-filter`, which broke compositing of the transparent window and left only the native traffic lights visible.
+
 ## [0.2.1] — 2026-10-28
 
 ### Fixed
