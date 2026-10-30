@@ -100,13 +100,16 @@ fn ensure_main_window(app: &tauri::AppHandle) -> Option<WebviewWindow> {
         .hidden_title(true)
         .title_bar_style(tauri::TitleBarStyle::Overlay);
 
-    builder
-        .build()
-        .map_err(|err| {
+    let window = match builder.build() {
+        Ok(window) => window,
+        Err(err) => {
             tracing::error!("Could not recreate the main window: {}", err);
-            err
-        })
-        .ok()
+            return None;
+        }
+    };
+    #[cfg(target_os = "macos")]
+    window_commands::apply_macos_stealth(window.app_handle());
+    Some(window)
 }
 
 /// Show and focus the overlay window.
@@ -235,6 +238,23 @@ pub fn run() {
                 exclude_recording,
             );
 
+            // Keep the overlay out of Mission Control / Task View and out of
+            // the taskbar switchers on both platforms.
+            #[cfg(target_os = "macos")]
+            window_commands::apply_macos_stealth(app.handle());
+            #[cfg(windows)]
+            {
+                let hide_taskbar = db
+                    .get_preference("hide_from_taskbar")
+                    .ok()
+                    .flatten()
+                    .map(|v| v == "true")
+                    .unwrap_or(true);
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_skip_taskbar(hide_taskbar);
+                }
+            }
+
             // Persist the overlay frame whenever the user drags or resizes it.
             spawn_geometry_flusher(app.handle().clone());
 
@@ -336,6 +356,8 @@ pub fn run() {
             window_commands::quick_hide,
             window_commands::show_window,
             window_commands::set_always_on_top,
+            window_commands::set_click_through,
+            window_commands::set_hide_from_taskbar,
             window_commands::set_vibrancy,
             window_commands::set_hide_from_dock,
             window_commands::set_screen_recording_protection,
@@ -553,6 +575,8 @@ fn build_tray_menu(
     )
     .build(app)?;
     let settings = MenuItemBuilder::with_id("settings", "Settings").build(app)?;
+    let click_through =
+        MenuItemBuilder::with_id("click_through", "Toggle click-through").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit TrueHalo").build(app)?;
 
     MenuBuilder::new(app)
@@ -562,6 +586,7 @@ fn build_tray_menu(
         .item(&fullscreen)
         .separator()
         .item(&settings)
+        .item(&click_through)
         .separator()
         .item(&quit)
         .build()
@@ -600,6 +625,9 @@ fn setup_tray(
             "settings" => {
                 show_overlay_focused(app);
                 let _ = app.emit("ui:open-settings", ());
+            }
+            "click_through" => {
+                let _ = app.emit("ui:toggle-click-through", ());
             }
             "quit" => app.exit(0),
             _ => {}

@@ -34,4 +34,11 @@ export const PROVIDERS: ProviderInfo[] = [
     keyUrl: "https://platform.openai.com/api-keys",
     blurb: "GPT-4o and the rest of the OpenAI family.",
   },
+  {
+    id: "local",
+    name: "Local server",
+    defaultModel: "",
+    keyUrl: "",
+    blurb: "Ollama, LM Studio or any OpenAI-compatible server. No key needed.",
+  },
 ];

@@ -31,6 +31,10 @@ pub async fn delete_api_key(provider: String) -> Result<(), String> {
 
 #[command]
 pub async fn has_api_key(provider: String) -> bool {
+    // Local servers need no API key.
+    if provider.eq_ignore_ascii_case("local") {
+        return true;
+    }
     tokio::task::spawn_blocking(move || keychain::has_credential(&provider))
         .await
         .unwrap_or(false)

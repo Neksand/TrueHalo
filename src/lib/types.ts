@@ -1,4 +1,4 @@
-export type ProviderId = "openrouter" | "gemini" | "openai";
+export type ProviderId = "openrouter" | "gemini" | "openai" | "local";
 
 export interface ModelPricing {
   prompt?: string;
@@ -116,11 +116,16 @@ export interface AppSettings {
   windowOpacity: number;
   vibrancy: boolean;
   hideFromDock: boolean;
+  hideFromTaskbar: boolean;
+  clickThrough: boolean;
   excludeScreenRecord: boolean;
   alwaysOnTop: boolean;
   compressScreenshots: boolean;
   compressionPreset: CompressionPreset;
   hideWindowOnCapture: boolean;
+  keepImagesInHistory: boolean;
+  ephemeralHistory: boolean;
+  localEndpoint: string;
   /** Tauri accelerator strings, e.g. "Alt+Shift+Digit2". */
   hotkeyToggle: string;
   hotkeyRegion: string;
@@ -128,16 +133,49 @@ export interface AppSettings {
   textMode: TextMode;
 }
 
+/** One attached file inside an assistant profile. */
+export interface ProfileFile {
+  name: string;
+  content: string;
+}
+
+/** Named answering context: system instructions plus attached files. */
+export interface AssistantProfile {
+  id: string;
+  name: string;
+  system: string;
+  files: ProfileFile[];
+  /** Skip the size cap for this profile. */
+  unlimited: boolean;
+  createdAt: number;
+}
+
+/** Hard cap for profile context unless the profile is unlimited. */
+export const PROFILE_CONTEXT_LIMIT = 200 * 1024;
+
+/** Rough token estimate for a profile (~4 chars per token). */
+export function estimateProfileTokens(profile: Pick<AssistantProfile, "system" | "files">): number {
+  const chars =
+    profile.system.length +
+    profile.files.reduce((sum, file) => sum + file.content.length, 0);
+  return Math.ceil(chars / 4);
+}
+
 export const DEFAULT_SETTINGS: AppSettings = {
   windowOpacity: 0.92,
   // Real transparency by default: vibrancy (blur) is an opt-in "glass" mode.
   vibrancy: false,
   hideFromDock: false,
+  hideFromTaskbar: true,
+  clickThrough: false,
   excludeScreenRecord: true,
   alwaysOnTop: false,
   compressScreenshots: true,
   compressionPreset: "balanced",
   hideWindowOnCapture: true,
+  keepImagesInHistory: true,
+  ephemeralHistory: false,
+  localEndpoint: "http://localhost:11434/v1",
   hotkeyToggle: "Alt+Space",
   hotkeyRegion: "Alt+Shift+Digit2",
   hotkeyFullscreen: "Alt+Shift+Digit3",

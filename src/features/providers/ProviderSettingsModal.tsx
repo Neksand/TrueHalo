@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   AppSettings,
+  AssistantProfile,
   COMPRESSION_PRESETS,
   CompressionPreset,
   ModelPricing,
   ModelInfo,
+  PROFILE_CONTEXT_LIMIT,
   ProviderId,
   QuickAction,
   ScreenCaptureStatus,
   UsageRow,
   UsageSummary,
+  estimateProfileTokens,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey, IS_WINDOWS } from "../../lib/hotkeys";
@@ -31,6 +34,7 @@ import {
   MonitorOff,
   CircleGauge,
   BarChart3,
+  BookOpen,
   Keyboard,
   Zap,
 } from "lucide-react";
@@ -45,6 +49,8 @@ interface ProviderSettingsModalProps {
   onChangeOpacity: (val: number) => void;
   onToggleVibrancy: (val: boolean) => void;
   onToggleHideFromDock: (val: boolean) => void;
+  onToggleHideFromTaskbar: (val: boolean) => void;
+  onToggleClickThrough: (val: boolean) => void;
   onToggleScreenRecord: (val: boolean) => void;
   onChangeSettings: (patch: Partial<AppSettings>) => void;
   permissionStatus: ScreenCaptureStatus | null;
@@ -53,6 +59,8 @@ interface ProviderSettingsModalProps {
   onRunSetup: () => void;
   customActions: QuickAction[];
   onChangeCustomActions: (actions: QuickAction[]) => void;
+  profiles: AssistantProfile[];
+  onChangeProfiles: (profiles: AssistantProfile[]) => void;
 }
 
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta"]);
@@ -161,6 +169,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   onChangeOpacity,
   onToggleVibrancy,
   onToggleHideFromDock,
+  onToggleHideFromTaskbar,
+  onToggleClickThrough,
   onToggleScreenRecord,
   onChangeSettings,
   permissionStatus,
@@ -169,6 +179,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   onRunSetup,
   customActions,
   onChangeCustomActions,
+  profiles,
+  onChangeProfiles,
 }) => {
   const [activeTab, setActiveTab] = useState<
     | "providers"
@@ -176,6 +188,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     | "appearance"
     | "hotkeys"
     | "actions"
+    | "profiles"
     | "privacy"
   >("providers");
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>(activeProvider);
@@ -193,6 +206,16 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [usageError, setUsageError] = useState<string | null>(null);
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPricing>>({});
+  const [appVersion, setAppVersion] = useState("");
+  const [profileName, setProfileName] = useState("");
+  const [profileSystem, setProfileSystem] = useState("");
+  const [localEndpointInput, setLocalEndpointInput] = useState("");
+
+  useEffect(() => {
+    if (isOpen) {
+      tauriApi.appVersion().then(setAppVersion).catch(() => {});
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen) {
@@ -508,6 +531,18 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           </button>
 
           <button
+            onClick={() => setActiveTab("profiles")}
+            className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
+              activeTab === "profiles"
+                ? "border-halo-accent text-slate-100"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Profiles</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("privacy")}
             className={`pb-2 shrink-0 font-medium border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "privacy"
@@ -578,6 +613,42 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                 </div>
               )}
 
+              {/* Local server: endpoint instead of an API key */}
+              {selectedProvider === "local" ? (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-slate-300">
+                    Server endpoint (OpenAI-compatible)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="http://localhost:11434/v1"
+                      value={localEndpointInput}
+                      onChange={(e) => setLocalEndpointInput(e.target.value)}
+                      className="flex-1 bg-[#0b0c10] border border-surface-border focus:border-halo-accent rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 outline-none transition-colors font-mono"
+                    />
+                    <button
+                      onClick={() => {
+                        const endpoint = localEndpointInput.trim() || "http://localhost:11434/v1";
+                        onChangeSettings({ localEndpoint: endpoint });
+                        setLocalEndpointInput("");
+                        setHasKey(true);
+                        setMessage({ type: "success", text: "Endpoint saved. Fetching models…" });
+                        fetchModels("local");
+                      }}
+                      className="px-4 py-2 bg-halo-accent hover:bg-halo-accent/90 text-white text-xs font-medium rounded-lg shadow-halo-sm transition-all shrink-0"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Ollama works out of the box. Point it at LM Studio, llama.cpp
+                    or anything speaking the OpenAI API. Current:{" "}
+                    <span className="font-mono text-slate-400">{settings.localEndpoint}</span>
+                  </p>
+                </div>
+              ) : (
+              <>
               {/* Status banner */}
               <div className="flex items-center justify-between p-3.5 rounded-lg border border-surface-border bg-surface-subtle/40">
                 <div className="flex items-center gap-2.5">
@@ -649,6 +720,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   </button>
                 </div>
               </div>
+              </>
+              )}
 
               {/* Feedback messages */}
               {message && (
@@ -1151,6 +1224,202 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           </div>
         )}
 
+        {/* Tab: Assistant profiles */}
+        {activeTab === "profiles" && (
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-100">Assistant profiles</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                A profile is answering context: instructions plus attached files,
+                sent with every request while selected in the chat header. Files
+                stay on your device and only leave it inside your own requests.
+              </p>
+            </div>
+
+            {profiles.length > 0 && (
+              <div className="rounded-xl border border-surface-border bg-surface-subtle/30 divide-y divide-surface-border px-4">
+                {profiles.map((profile) => {
+                  const tokens = estimateProfileTokens(profile);
+                  const overLimit =
+                    !profile.unlimited &&
+                    profile.system.length +
+                      profile.files.reduce((sum, f) => sum + f.content.length, 0) >
+                      PROFILE_CONTEXT_LIMIT;
+                  return (
+                    <div key={profile.id} className="py-3 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-slate-200">
+                            {profile.name}
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            ~{tokens.toLocaleString("en-US")} tokens · {profile.files.length}{" "}
+                            {profile.files.length === 1 ? "file" : "files"}
+                            {profile.unlimited ? " · unlimited" : ""}
+                          </div>
+                          {overLimit && (
+                            <div className="text-[11px] text-amber-300/90 mt-0.5">
+                              Over the {(PROFILE_CONTEXT_LIMIT / 1024).toFixed(0)} KB cap —
+                              enable Unlimited or trim files.
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() =>
+                              onChangeProfiles(
+                                profiles.map((p) =>
+                                  p.id === profile.id
+                                    ? { ...p, unlimited: !p.unlimited }
+                                    : p,
+                                ),
+                              )
+                            }
+                            title="Lift the size cap for this profile"
+                            className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                              profile.unlimited
+                                ? "bg-amber-500/20 text-amber-200 border border-amber-600/50"
+                                : "text-slate-400 hover:text-slate-200 border border-surface-border"
+                            }`}
+                          >
+                            {profile.unlimited ? "Unlimited" : "Limit"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!confirm(`Delete the "${profile.name}" profile?`)) return;
+                              onChangeProfiles(profiles.filter((p) => p.id !== profile.id));
+                            }}
+                            className="p-1.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                            title="Delete profile"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                      {profile.files.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {profile.files.map((file) => (
+                            <span
+                              key={file.name}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-deep border border-surface-border text-[10px] text-slate-400 font-mono"
+                            >
+                              {file.name}
+                              <button
+                                onClick={() =>
+                                  onChangeProfiles(
+                                    profiles.map((p) =>
+                                      p.id === profile.id
+                                        ? {
+                                            ...p,
+                                            files: p.files.filter((f) => f.name !== file.name),
+                                          }
+                                        : p,
+                                    ),
+                                  )
+                                }
+                                className="hover:text-rose-400"
+                                title={`Remove ${file.name}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.accept = ".txt,.md,.markdown";
+                          input.onchange = () => {
+                            const file = input.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const content = String(reader.result ?? "");
+                              onChangeProfiles(
+                                profiles.map((p) =>
+                                  p.id === profile.id
+                                    ? {
+                                        ...p,
+                                        files: [
+                                          ...p.files.filter((f) => f.name !== file.name),
+                                          { name: file.name, content },
+                                        ],
+                                      }
+                                    : p,
+                                ),
+                              );
+                            };
+                            reader.readAsText(file);
+                          };
+                          input.click();
+                        }}
+                        className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
+                      >
+                        + Attach .txt / .md file
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/30 space-y-3">
+              <div>
+                <label className="text-[11px] font-medium text-slate-300 block mb-1">
+                  Profile name
+                </label>
+                <input
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="e.g. Thesis, Onboarding, Runbook"
+                  maxLength={48}
+                  className="w-full px-3 py-2 rounded-lg bg-surface-deep border border-surface-border text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-halo-accent/60"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-medium text-slate-300 block mb-1">
+                  Instructions
+                </label>
+                <textarea
+                  value={profileSystem}
+                  onChange={(e) => setProfileSystem(e.target.value)}
+                  placeholder="What should answers take into account? e.g. Always cite the attached API reference."
+                  rows={3}
+                  className="w-full px-3 py-2 rounded-lg bg-surface-deep border border-surface-border text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-halo-accent/60 resize-y"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  const name = profileName.trim();
+                  if (!name) {
+                    setMessage({ type: "error", text: "Give the profile a name" });
+                    return;
+                  }
+                  onChangeProfiles([
+                    ...profiles,
+                    {
+                      id: crypto.randomUUID(),
+                      name: name.slice(0, 48),
+                      system: profileSystem.trim(),
+                      files: [],
+                      unlimited: false,
+                      createdAt: Date.now(),
+                    },
+                  ]);
+                  setProfileName("");
+                  setProfileSystem("");
+                  setMessage({ type: "success", text: "Profile added" });
+                }}
+                className="px-3 py-2 rounded-lg bg-halo-accent hover:bg-halo-accent/90 text-white text-xs font-medium transition-colors"
+              >
+                Add profile
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tab 5: Privacy, Screen Recording & Capture */}
         {activeTab === "privacy" && (
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -1404,6 +1673,50 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                 </label>
               </div>
 
+              {IS_WINDOWS && (
+                <div className="flex items-center justify-between border-t border-surface-border pt-3">
+                  <div>
+                    <span className="text-xs font-semibold text-slate-100">
+                      Hide from the taskbar, Alt+Tab and Task View
+                    </span>
+                    <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
+                      The overlay is marked as a tool window, so task switchers
+                      skip it entirely.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+                    <input
+                      type="checkbox"
+                      checked={settings.hideFromTaskbar}
+                      onChange={(e) => onToggleHideFromTaskbar(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-surface-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-halo-accent"></div>
+                  </label>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between border-t border-surface-border pt-3">
+                <div>
+                  <span className="text-xs font-semibold text-slate-100">
+                    Click-through
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
+                    Mouse clicks pass through the overlay. Use the hotkeys or the
+                    tray menu to toggle it back.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+                  <input
+                    type="checkbox"
+                    checked={settings.clickThrough}
+                    onChange={(e) => onToggleClickThrough(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-surface-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-halo-accent"></div>
+                </label>
+              </div>
+
               <div className="flex items-center justify-between border-t border-surface-border pt-3">
                 <div>
                   <span className="text-xs font-semibold text-slate-100 flex items-center gap-2">
@@ -1470,6 +1783,55 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   delete the entire local chat history here.
                 </p>
               </div>
+
+              <div className="flex items-center justify-between border-t border-rose-900/40 pt-3">
+                <div>
+                  <span className="text-xs font-medium text-slate-200">
+                    Keep screenshots in history
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-0.5 max-w-md">
+                    Off stores text only — smaller database, same answers.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+                  <input
+                    type="checkbox"
+                    checked={settings.keepImagesInHistory}
+                    onChange={(e) => onChangeSettings({ keepImagesInHistory: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-surface-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-halo-accent"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-rose-900/40 pt-3">
+                <div>
+                  <span className="text-xs font-medium text-slate-200">
+                    Ephemeral history
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-0.5 max-w-md">
+                    Delete all chats when the app quits. Nothing is kept.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-4">
+                  <input
+                    type="checkbox"
+                    checked={settings.ephemeralHistory}
+                    onChange={(e) => {
+                      if (
+                        e.target.checked &&
+                        !confirm("Delete all chats on every quit from now on?")
+                      ) {
+                        return;
+                      }
+                      onChangeSettings({ ephemeralHistory: e.target.checked });
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-surface-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-halo-accent"></div>
+                </label>
+              </div>
+
               <button
                 onClick={async () => {
                   if (!confirm("Delete the entire local chat history?")) return;
@@ -1486,7 +1848,10 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
         )}
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-surface-border bg-surface-subtle/50 flex justify-end">
+        <div className="px-6 py-3 border-t border-surface-border bg-surface-subtle/50 flex items-center justify-between">
+          <span className="text-[11px] text-slate-500 font-mono">
+            TrueHalo {appVersion || "…"}
+          </span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-surface-subtle hover:bg-surface-border text-slate-200 text-xs font-medium rounded-lg transition-colors"

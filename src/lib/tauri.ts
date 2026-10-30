@@ -180,6 +180,19 @@ export const tauriApi = {
     return await invoke<boolean>("set_hide_from_dock", { hide });
   },
 
+  async setHideFromTaskbar(hide: boolean): Promise<boolean> {
+    return await invoke<boolean>("set_hide_from_taskbar", { hide });
+  },
+
+  async setClickThrough(ignore: boolean): Promise<boolean> {
+    return await invoke<boolean>("set_click_through", { ignore });
+  },
+
+  async appVersion(): Promise<string> {
+    const { getVersion } = await import("@tauri-apps/api/app");
+    return await getVersion();
+  },
+
   async setScreenRecordingProtection(exclude: boolean): Promise<boolean> {
     return await invoke<boolean>("set_screen_recording_protection", { exclude });
   },

@@ -1,4 +1,5 @@
 pub mod gemini;
+pub mod local;
 pub mod openai;
 pub mod openrouter;
 pub mod provider;
@@ -6,6 +7,7 @@ pub mod types;
 
 use anyhow::{anyhow, Result};
 use gemini::GeminiProvider;
+use local::LocalProvider;
 use openai::OpenAiProvider;
 use openrouter::OpenRouterProvider;
 use provider::AiProvider;
@@ -17,6 +19,11 @@ pub fn get_provider(provider_id: &str, api_key: String) -> Result<Box<dyn AiProv
         "openai" => Ok(Box::new(OpenAiProvider::new(api_key))),
         other => Err(anyhow!("Unsupported AI provider: {}", other)),
     }
+}
+
+/// Local servers need an endpoint, not just a key.
+pub fn get_local_provider(base_url: String, api_key: String) -> Box<dyn AiProvider> {
+    Box::new(LocalProvider::new(base_url, api_key))
 }
 
 #[cfg(test)]

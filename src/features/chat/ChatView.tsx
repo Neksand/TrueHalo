@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   AppSettings,
+  AssistantProfile,
   ChatMessage,
   COMPRESSION_PRESETS,
   ContentPart,
@@ -11,6 +12,7 @@ import {
   SessionRecord,
   TokenUsage,
 } from "../../lib/types";
+import { profileContextText } from "../../lib/profiles";
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey } from "../../lib/hotkeys";
 import { BUILT_IN_ACTIONS } from "../../lib/quickActions";
@@ -53,6 +55,9 @@ interface ChatViewProps {
   onRequirePermission: () => void;
   permissionGranted: boolean;
   customActions: QuickAction[];
+  profiles: AssistantProfile[];
+  activeProfileId: string | null;
+  onSelectProfile: (id: string | null) => void;
 }
 
 /** Human readable file size. */
@@ -89,6 +94,17 @@ const stripOlderImages = (messages: ChatMessage[]): ChatMessage[] => {
   });
 };
 
+/**
+ * Replace stored screenshots with a placeholder. Used when the user keeps
+ * text history only: images are still sent with the request, just never saved.
+ */
+const dropImages = (parts: ContentPart[]): ContentPart[] =>
+  parts.map((part) =>
+    part.type === "image_base64"
+      ? { type: "text" as const, text: "[screenshot not stored]" }
+      : part,
+  );
+
 const contentToText = (contentJson: string): string => {
   try {
     const parts = JSON.parse(contentJson) as ContentPart[];
@@ -112,7 +128,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onRequirePermission,
   permissionGranted,
   customActions,
+  profiles,
+  activeProfileId,
+  onSelectProfile,
 }) => {
+  const activeProfile = useMemo(
+    () => profiles.find((p) => p.id === activeProfileId) ?? null,
+    [profiles, activeProfileId],
+  );
   const hotkeys = useMemo(
     () => ({
       toggleCompact: formatHotkey(settings.hotkeyToggle, true),
@@ -592,13 +615,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
       }
     }
 
-    // Save user message in SQLite
+    // Save user message in SQLite. When image history is off, screenshots
+    // are replaced with a placeholder so only text is stored.
     try {
       await tauriApi.saveMessage(
         userMessageId,
         currentSessionId,
         "user",
-        JSON.stringify(contentParts)
+        JSON.stringify(
+          settings.keepImagesInHistory ? contentParts : dropImages(contentParts),
+        ),
       );
     } catch (e) {
       console.warn("Could not save user message:", e);
@@ -678,12 +704,23 @@ export const ChatView: React.FC<ChatViewProps> = ({
       );
 
       // Start stream — only the newest screenshot is sent, older ones are dropped
-      // so long conversations stay cheap.
+      // so long conversations stay cheap. The active profile (if any) goes
+      // first as the system message; file contents stay on device except for
+      // this request to the selected provider.
+      const profileText = activeProfile ? profileContextText(activeProfile) : "";
       await tauriApi.startStream({
         stream_id: streamId,
         provider: activeProvider,
         model: activeModel,
         messages: [
+          ...(profileText
+            ? [
+                {
+                  role: "system" as const,
+                  content: [{ type: "text" as const, text: profileText }],
+                },
+              ]
+            : []),
           ...(action?.system
             ? [
                 {
@@ -985,6 +1022,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 {sessionCost !== undefined && ` · ${formatUsd(sessionCost)}`}
               </span>
             ) : null}
+
+            {profiles.length > 0 && (
+              <select
+                value={activeProfileId ?? ""}
+                onChange={(e) => onSelectProfile(e.target.value || null)}
+                title={
+                  activeProfile
+                    ? `Answering with the "${activeProfile.name}" profile`
+                    : "Answer without a profile"
+                }
+                className={`px-2 py-1 rounded-lg bg-surface-subtle border text-[11px] max-w-[130px] outline-none transition-colors cursor-pointer ${
+                  activeProfile
+                    ? "border-halo-accent/60 text-slate-100"
+                    : "border-surface-border text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <option value="">No profile</option>
+                {profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+              </select>
+            )}
 
             <button
               onClick={onOpenSettings}

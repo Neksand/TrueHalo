@@ -73,11 +73,13 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
   };
 
   const saveAndTest = async () => {
-    if (!provider || !apiKey.trim()) return;
+    if (!provider || (provider.id !== "local" && !apiKey.trim())) return;
     setBusy(true);
     setError(null);
     try {
-      await tauriApi.saveApiKey(provider.id, apiKey.trim());
+      if (provider.id !== "local") {
+        await tauriApi.saveApiKey(provider.id, apiKey.trim());
+      }
       const catalog = await tauriApi.listModels(provider.id);
       if (!catalog.length) {
         throw new Error("The provider returned an empty model list.");
@@ -191,6 +193,29 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
           {/* Step 2: key */}
           {step === 1 && provider && (
             <div className="space-y-4">
+              {provider.id === "local" ? (
+                <>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-100">
+                      Connect to {provider.name}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      No API key needed. Make sure Ollama is running
+                      (`ollama serve`), or point Settings at another
+                      OpenAI-compatible server later.
+                    </p>
+                  </div>
+                  <button
+                    onClick={saveAndTest}
+                    disabled={busy}
+                    className="px-4 py-2.5 rounded-lg bg-halo-accent hover:bg-halo-accent/90 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium transition-colors flex items-center gap-2"
+                  >
+                    {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    Find local models
+                  </button>
+                </>
+              ) : (
+              <>
               <div>
                 <h3 className="text-sm font-semibold text-slate-100">
                   Paste your {provider.name} API key
@@ -232,6 +257,8 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ isOpen, onCo
                 Get a {provider.name} key
                 <ExternalLink className="w-3 h-3" />
               </button>
+              </>
+              )}
             </div>
           )}
 

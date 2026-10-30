@@ -5,6 +5,7 @@ import { OnboardingWizard } from "./features/onboarding/OnboardingWizard";
 import { PermissionModal } from "./features/capture/PermissionModal";
 import {
   AppSettings,
+  AssistantProfile,
   DEFAULT_SETTINGS,
   ProviderId,
   QuickAction,
@@ -13,16 +14,26 @@ import {
 import { tauriApi } from "./lib/tauri";
 import { IS_WINDOWS } from "./lib/hotkeys";
 import { CUSTOM_ACTIONS_PREF, parseCustomActions } from "./lib/quickActions";
+import {
+  ACTIVE_PROFILE_PREF,
+  PROFILES_PREF,
+  parseProfiles,
+} from "./lib/profiles";
 
 const PREF_KEYS: Record<keyof AppSettings, string> = {
   windowOpacity: "window_opacity",
   vibrancy: "vibrancy",
   hideFromDock: "hide_from_dock",
+  hideFromTaskbar: "hide_from_taskbar",
+  clickThrough: "click_through",
   excludeScreenRecord: "exclude_screen_recording",
   alwaysOnTop: "always_on_top",
   compressScreenshots: "compress_screenshots",
   compressionPreset: "compression_preset",
   hideWindowOnCapture: "hide_window_on_capture",
+  keepImagesInHistory: "keep_images_in_history",
+  ephemeralHistory: "ephemeral_history",
+  localEndpoint: "local_endpoint",
   hotkeyToggle: "hotkey_toggle",
   hotkeyRegion: "hotkey_region",
   hotkeyFullscreen: "hotkey_fullscreen",
@@ -37,6 +48,8 @@ export const App: React.FC = () => {
   const [isPermissionOpen, setIsPermissionOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [customActions, setCustomActions] = useState<QuickAction[]>([]);
+  const [profiles, setProfiles] = useState<AssistantProfile[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<ScreenCaptureStatus | null>(null);
 
   // ---- Persist one settings field in SQLite and apply it natively -------------
@@ -71,6 +84,7 @@ export const App: React.FC = () => {
   // ---- Bootstrap --------------------------------------------------------------
   useEffect(() => {
     (async () => {
+      let storedProvider: string | null = null;
       try {
         const [
           providerPref,
@@ -88,6 +102,13 @@ export const App: React.FC = () => {
           hotkeyFullscreenPref,
           textModePref,
           customActionsPref,
+          profilesPref,
+          activeProfilePref,
+          hideTaskbarPref,
+          clickThroughPref,
+          keepImagesPref,
+          ephemeralPref,
+          localEndpointPref,
         ] = await Promise.all([
           tauriApi.getPreference("active_provider"),
           tauriApi.getPreference("active_model"),
@@ -104,9 +125,31 @@ export const App: React.FC = () => {
           tauriApi.getPreference(PREF_KEYS.hotkeyFullscreen),
           tauriApi.getPreference(PREF_KEYS.textMode),
           tauriApi.getPreference(CUSTOM_ACTIONS_PREF),
+          tauriApi.getPreference(PROFILES_PREF),
+          tauriApi.getPreference(ACTIVE_PROFILE_PREF),
+          tauriApi.getPreference(PREF_KEYS.hideFromTaskbar),
+          tauriApi.getPreference(PREF_KEYS.clickThrough),
+          tauriApi.getPreference(PREF_KEYS.keepImagesInHistory),
+          tauriApi.getPreference(PREF_KEYS.ephemeralHistory),
+          tauriApi.getPreference(PREF_KEYS.localEndpoint),
         ]);
 
         setCustomActions(parseCustomActions(customActionsPref));
+        storedProvider = providerPref;
+        const loadedProfiles = parseProfiles(profilesPref);
+        setProfiles(loadedProfiles);
+        if (activeProfilePref && loadedProfiles.some((p) => p.id === activeProfilePref)) {
+          setActiveProfileId(activeProfilePref);
+        }
+
+        // Ephemeral mode: leave no history behind from the previous run.
+        if (ephemeralPref === "true") {
+          try {
+            await tauriApi.clearAllHistory();
+          } catch (e) {
+            console.warn("Could not clear ephemeral history:", e);
+          }
+        }
 
         if (providerPref) setActiveProvider(providerPref as ProviderId);
         if (modelPref) {
@@ -127,6 +170,14 @@ export const App: React.FC = () => {
           vibrancy: vibrancy !== null ? vibrancy === "true" : DEFAULT_SETTINGS.vibrancy,
           hideFromDock:
             hideFromDock !== null ? hideFromDock === "true" : DEFAULT_SETTINGS.hideFromDock,
+          hideFromTaskbar:
+            hideTaskbarPref !== null
+              ? hideTaskbarPref === "true"
+              : DEFAULT_SETTINGS.hideFromTaskbar,
+          clickThrough:
+            clickThroughPref !== null
+              ? clickThroughPref === "true"
+              : DEFAULT_SETTINGS.clickThrough,
           excludeScreenRecord: shouldProtect,
           alwaysOnTop:
             alwaysOnTop !== null ? alwaysOnTop === "true" : DEFAULT_SETTINGS.alwaysOnTop,
@@ -137,6 +188,16 @@ export const App: React.FC = () => {
             hideOnCapture !== null
               ? hideOnCapture === "true"
               : DEFAULT_SETTINGS.hideWindowOnCapture,
+          keepImagesInHistory:
+            keepImagesPref !== null
+              ? keepImagesPref === "true"
+              : DEFAULT_SETTINGS.keepImagesInHistory,
+          ephemeralHistory:
+            ephemeralPref !== null
+              ? ephemeralPref === "true"
+              : DEFAULT_SETTINGS.ephemeralHistory,
+          localEndpoint:
+            localEndpointPref?.trim() || DEFAULT_SETTINGS.localEndpoint,
           hotkeyToggle: hotkeyTogglePref || DEFAULT_SETTINGS.hotkeyToggle,
           hotkeyRegion: hotkeyRegionPref || DEFAULT_SETTINGS.hotkeyRegion,
           hotkeyFullscreen: hotkeyFullscreenPref || DEFAULT_SETTINGS.hotkeyFullscreen,
@@ -161,18 +222,22 @@ export const App: React.FC = () => {
           setSettings((prev) => ({ ...prev, hideFromDock: false }));
         }
         await tauriApi.setAlwaysOnTop(loaded.alwaysOnTop);
+        await tauriApi.setClickThrough(loaded.clickThrough);
+        if (IS_WINDOWS) {
+          await tauriApi.setHideFromTaskbar(loaded.hideFromTaskbar);
+        }
       } catch (e) {
         console.warn("Failed to load stored preferences:", e);
       }
 
       await refreshPermission();
 
-      // Check credentials
+      // Check credentials (local servers need no key)
       const hasOpenRouter = await tauriApi.hasApiKey("openrouter");
       const hasGemini = await tauriApi.hasApiKey("gemini");
       const hasOpenAI = await tauriApi.hasApiKey("openai");
 
-      if (!hasOpenRouter && !hasGemini && !hasOpenAI) {
+      if (!hasOpenRouter && !hasGemini && !hasOpenAI && storedProvider !== "local") {
         setIsOnboardingOpen(true);
       }
     })();
@@ -251,6 +316,33 @@ export const App: React.FC = () => {
     if (val && !applied) updateSettings({ hideFromDock: false });
   };
 
+  const handleToggleHideFromTaskbar = async (val: boolean) => {
+    updateSettings({ hideFromTaskbar: val });
+    await tauriApi.setHideFromTaskbar(val);
+  };
+
+  const handleToggleClickThrough = async (val: boolean) => {
+    updateSettings({ clickThrough: val });
+    await tauriApi.setClickThrough(val);
+  };
+
+  // Tray menu → click-through toggle (the overlay ignores mouse events then,
+  // so the tray is the way back without a mouse).
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      unlisten = await tauriApi.onHotkey("ui:toggle-click-through", () => {
+        setSettings((prev) => {
+          const next = !prev.clickThrough;
+          void tauriApi.setClickThrough(next);
+          void tauriApi.setPreference(PREF_KEYS.clickThrough, String(next));
+          return { ...prev, clickThrough: next };
+        });
+      });
+    })();
+    return () => unlisten?.();
+  }, []);
+
   const handleToggleScreenRecord = async (val: boolean) => {
     updateSettings({ excludeScreenRecord: val });
     const applied = await tauriApi.setScreenRecordingProtection(val);
@@ -267,6 +359,24 @@ export const App: React.FC = () => {
       await tauriApi.setPreference(CUSTOM_ACTIONS_PREF, JSON.stringify(actions));
     } catch (e) {
       console.warn("Could not save custom quick actions:", e);
+    }
+  }, []);
+
+  const updateProfiles = useCallback(async (next: AssistantProfile[]) => {
+    setProfiles(next);
+    try {
+      await tauriApi.setPreference(PROFILES_PREF, JSON.stringify(next));
+    } catch (e) {
+      console.warn("Could not save assistant profiles:", e);
+    }
+  }, []);
+
+  const updateActiveProfile = useCallback(async (id: string | null) => {
+    setActiveProfileId(id);
+    try {
+      await tauriApi.setPreference(ACTIVE_PROFILE_PREF, id ?? "");
+    } catch (e) {
+      console.warn("Could not save the active profile:", e);
     }
   }, []);
 
@@ -302,6 +412,9 @@ export const App: React.FC = () => {
         }}
         permissionGranted={permissionStatus ? permissionStatus.granted : true}
         customActions={customActions}
+        profiles={profiles}
+        activeProfileId={activeProfileId}
+        onSelectProfile={updateActiveProfile}
       />
 
       <ProviderSettingsModal
@@ -314,6 +427,8 @@ export const App: React.FC = () => {
         onChangeOpacity={handleChangeOpacity}
         onToggleVibrancy={handleToggleVibrancy}
         onToggleHideFromDock={handleToggleHideFromDock}
+        onToggleHideFromTaskbar={handleToggleHideFromTaskbar}
+        onToggleClickThrough={handleToggleClickThrough}
         onToggleScreenRecord={handleToggleScreenRecord}
         onChangeSettings={updateSettings}
         permissionStatus={permissionStatus}
@@ -321,6 +436,8 @@ export const App: React.FC = () => {
         onOpenPermission={() => setIsPermissionOpen(true)}
         customActions={customActions}
         onChangeCustomActions={updateCustomActions}
+        profiles={profiles}
+        onChangeProfiles={updateProfiles}
         onRunSetup={() => {
           setIsSettingsOpen(false);
           setIsOnboardingOpen(true);

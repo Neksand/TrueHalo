@@ -4,6 +4,16 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-10-30
+
+### Added
+- Assistant profiles: named answering context (instructions plus .txt/.md files) selected in the chat header and sent with every request. ~200 KB cap per profile with a token estimate and a per-profile Unlimited switch; files stay on device except inside your own requests.
+- Local models: a Local server provider for Ollama, LM Studio or any OpenAI-compatible endpoint. No API key needed; endpoint configurable in Settings.
+- Click-through mode: mouse clicks pass through the overlay; toggle back with the hotkeys or the tray menu.
+- History controls: keep screenshots in history on/off (text-only history) and ephemeral mode (delete all chats on quit).
+- Stealth: the overlay stays out of Mission Control and the window cycle on macOS, and out of the taskbar, Alt+Tab and Task View on Windows.
+- The app version is shown in the Settings footer.
+
 ## [0.2.3] — 2026-10-30
 
 ### Added

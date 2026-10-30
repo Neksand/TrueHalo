@@ -112,6 +112,68 @@ pub fn set_vibrancy(app: AppHandle, enabled: bool) -> Result<bool, String> {
     Ok(false)
 }
 
+/// Let mouse events pass through the overlay (click-through mode).
+///
+/// The window stays visible but no longer takes clicks; the global hotkeys
+/// still work, so the user can toggle it back without a mouse.
+#[command]
+pub fn set_click_through(app: AppHandle, ignore: bool) -> Result<bool, String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window
+            .set_ignore_cursor_events(ignore)
+            .map_err(|e| e.to_string())?;
+        tracing::info!("click-through set to: {}", ignore);
+        Ok(true)
+    } else {
+        Err("Main window not found".to_string())
+    }
+}
+
+/// Hide the window from the taskbar, Alt+Tab and Task View (Windows).
+///
+/// macOS covers this with the accessory activation policy; on Windows the
+/// window is marked as a tool window instead.
+#[command]
+pub fn set_hide_from_taskbar(app: AppHandle, hide: bool) -> Result<bool, String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window
+            .set_skip_taskbar(hide)
+            .map_err(|e| e.to_string())?;
+        tracing::info!("skip taskbar set to: {}", hide);
+        Ok(true)
+    } else {
+        Err("Main window not found".to_string())
+    }
+}
+
+/// Keep the overlay out of Mission Control and the window cycle (macOS).
+///
+/// `Transient` windows are hidden while Mission Control is active,
+/// `Stationary` keeps them out of the window list, and `IgnoresCycle`
+/// drops them from Cmd+Tab. Applied on top of the accessory policy.
+#[cfg(target_os = "macos")]
+pub fn apply_macos_stealth(app: &AppHandle) {
+    use std::ffi::c_void;
+
+    const CAN_JOIN_ALL_SPACES: isize = 1;
+    const TRANSIENT: isize = 1 << 3;
+    const STATIONARY: isize = 1 << 4;
+    const IGNORES_CYCLE: isize = 1 << 6;
+
+    if let Some(window) = app.get_webview_window("main") {
+        if let Ok(ns_win) = window.ns_window() {
+            unsafe {
+                crate::macos::send(
+                    ns_win,
+                    "setCollectionBehavior:",
+                    (CAN_JOIN_ALL_SPACES | TRANSIENT | STATIONARY | IGNORES_CYCLE)
+                        as *mut c_void,
+                );
+            }
+            tracing::info!("macOS stealth collection behavior applied");
+        }
+    }
+}
 /// Hide the app from the Dock / ⌘Tab switcher (macOS accessory activation policy).
 #[command]
 pub fn set_hide_from_dock(app: AppHandle, hide: bool) -> Result<bool, String> {

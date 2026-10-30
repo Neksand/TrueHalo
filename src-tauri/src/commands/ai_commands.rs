@@ -25,12 +25,31 @@ fn keychain_error(provider: &str, err: KeychainError) -> String {
 }
 
 #[command]
-pub async fn list_models(provider: String) -> Result<Vec<ModelInfo>, String> {
+pub async fn list_models(
+    state: State<'_, AppState>,
+    provider: String,
+) -> Result<Vec<ModelInfo>, String> {
+    if provider.eq_ignore_ascii_case("local") {
+        let endpoint = local_endpoint(&state.db);
+        let client = crate::ai::get_local_provider(endpoint, String::new());
+        return client.list_models().await.map_err(|e| e.to_string());
+    }
+
     let api_key =
         keychain::get_credential(&provider).map_err(|err| keychain_error(&provider, err))?;
 
     let client = get_provider(&provider, api_key).map_err(|e| e.to_string())?;
     client.list_models().await.map_err(|e| e.to_string())
+}
+
+/// Endpoint for OpenAI-compatible local servers. Ollama's default; the user
+/// can point it at LM Studio, llama.cpp, or anything else speaking the API.
+pub fn local_endpoint(db: &crate::storage::db::DatabaseManager) -> String {
+    db.get_preference("local_endpoint")
+        .ok()
+        .flatten()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or_else(|| "http://localhost:11434/v1".to_string())
 }
 
 #[command]
@@ -42,10 +61,15 @@ pub async fn start_stream(
     let provider_name = request.provider.clone();
     let stream_id = request.stream_id.clone();
 
-    let api_key = keychain::get_credential(&provider_name)
-        .map_err(|err| keychain_error(&provider_name, err))?;
-
-    let client = get_provider(&provider_name, api_key).map_err(|e| e.to_string())?;
+    // Local servers need no API key.
+    let client: Box<dyn crate::ai::provider::AiProvider> = if provider_name.eq_ignore_ascii_case("local") {
+        let endpoint = local_endpoint(&state.db);
+        crate::ai::get_local_provider(endpoint, String::new())
+    } else {
+        let api_key = keychain::get_credential(&provider_name)
+            .map_err(|err| keychain_error(&provider_name, err))?;
+        get_provider(&provider_name, api_key).map_err(|e| e.to_string())?
+    };
 
     let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
     let (event_tx, mut event_rx) = mpsc::channel::<StreamEventPayload>(64);
