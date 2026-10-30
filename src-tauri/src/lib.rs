@@ -209,6 +209,15 @@ pub fn run() {
             // Read the user's shortcuts before the database moves into state.
             let stored_hotkeys = hotkeys::HotkeyConfig::from_db(&db);
 
+            // Taskbar stealth is applied after the move; read its pref now.
+            #[cfg(windows)]
+            let hide_from_taskbar = db
+                .get_preference("hide_from_taskbar")
+                .ok()
+                .flatten()
+                .map(|v| v == "true")
+                .unwrap_or(true);
+
             app.manage(AppState::new(db));
 
             // Register shortcuts before the tray is built so its labels match
@@ -244,14 +253,8 @@ pub fn run() {
             window_commands::apply_macos_stealth(app.handle());
             #[cfg(windows)]
             {
-                let hide_taskbar = db
-                    .get_preference("hide_from_taskbar")
-                    .ok()
-                    .flatten()
-                    .map(|v| v == "true")
-                    .unwrap_or(true);
                 if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.set_skip_taskbar(hide_taskbar);
+                    let _ = window.set_skip_taskbar(hide_from_taskbar);
                 }
             }
 
