@@ -4,6 +4,11 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] — 2026-10-30
+
+### Added
+- Per-capture Image / Text choice. Every screenshot keeps both the compressed image and the on-device recognized text; the toggle picks what the next message sends. Settings → Screenshot input is now the default choice (Auto / Text first / Image first).
+
 ## [0.2.2] — 2026-10-29
 
 ### Fixed

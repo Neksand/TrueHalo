@@ -92,9 +92,9 @@ if [ "${DO_INSTALL}" = "1" ]; then
     cp -R "${APP_PATH}" "${DMG_DIR}/"
     ln -s /Applications "${DMG_DIR}/Applications"
     hdiutil create -volname "TrueHalo" -srcfolder "${DMG_DIR}" -ov -format ULFO \
-      "TrueHalo-0.2.2-Installer.dmg" >/dev/null
+      "TrueHalo-0.2.3-Installer.dmg" >/dev/null
     rm -rf "${DMG_DIR}"
-    ok "DMG: TrueHalo-0.2.2-Installer.dmg"
+    ok "DMG: TrueHalo-0.2.3-Installer.dmg"
   fi
 
   if [ "${RESET_TCC}" = "1" ]; then

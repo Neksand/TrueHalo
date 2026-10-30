@@ -50,9 +50,13 @@ It is **not** a background recorder or an always-listening assistant:
 Typical uses: debugging code, reading dense documentation, understanding dashboards, translating an
 error message, or summarising a long page you are allowed to look at.
 
-## What's new in 0.2.2
+## What's new in 0.2.3
 
-Current release: **0.2.2** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
+Current release: **0.2.3** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
+
+- **Per-capture Image / Text choice** — every screenshot keeps the compressed image and the recognized text; the toggle picks what gets sent.
+
+## What's new in 0.2.2
 
 - **First-run setup wizard** — pick a provider, paste the key, choose a model, send a test request.
 - **Customizable hotkeys** — toggle / region / fullscreen can be re-recorded in Settings; conflicts roll back.
@@ -157,8 +161,8 @@ providers, and no continuous audio or screen capture.
 
 | Platform | Status | Installer |
 |---|---|---|
-| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.2.2-Installer.dmg` |
-| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.2.2_x64-setup.exe` |
+| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.2.3-Installer.dmg` |
+| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.2.3_x64-setup.exe` |
 
 The React UI and the Rust core are shared. The macOS backend uses AppKit and the Keychain; the Windows
 backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager.
@@ -169,7 +173,7 @@ backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager.
 
 **You need:** macOS 13 Ventura or newer on an M1/M2/M3/M4 Mac.
 
-1. Download `TrueHalo-0.2.2-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo-0.2.3-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Open the DMG and drag **TrueHalo** into **Applications**.
 3. Launch it. macOS will say it cannot verify the app — this is normal, because the build is signed
    with a local certificate instead of a paid Apple Developer ID.
@@ -198,7 +202,7 @@ backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager.
 **You need:** Windows 10 version 2004 (build 19041) or newer, or Windows 11. The installer downloads
 WebView2 automatically if it is missing.
 
-1. Download `TrueHalo_0.2.2_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo_0.2.3_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Run it. If SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** — the
    installer is not signed with a commercial certificate.
 3. Launch TrueHalo from the Start menu or the tray icon. Windows has no screen-recording permission,

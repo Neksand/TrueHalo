@@ -1,7 +1,7 @@
 {
   "name": "truehalo",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "description": "Native, privacy-first AI screen overlay for desktop. A lightweight alternative to Cheating Daddy.",
   "license": "GPL-3.0-only",
