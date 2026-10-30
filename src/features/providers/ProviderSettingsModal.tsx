@@ -1332,9 +1332,9 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   Screenshot input
                 </span>
                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                  Text mode recognizes text on-device with the system OCR engine
-                  and sends only that text. It is faster, cheaper, and easier to
-                  correct before asking.
+                  Every capture keeps both the compressed screenshot and the
+                  on-device recognized text. This picks the default; you can
+                  switch per capture with the Image / Text toggle.
                 </p>
               </div>
 
@@ -1342,13 +1342,13 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                 {(["auto", "text", "image"] as const).map((mode) => {
                   const isActive = settings.textMode === mode;
                   const label =
-                    mode === "auto" ? "Auto" : mode === "text" ? "Text only" : "Image only";
+                    mode === "auto" ? "Auto" : mode === "text" ? "Text first" : "Image first";
                   const hint =
                     mode === "auto"
-                      ? "OCR when useful"
+                      ? "Text when found"
                       : mode === "text"
-                        ? "Fallback to image"
-                        : "Always send image";
+                        ? "Text if any"
+                        : "Always image";
                   return (
                     <button
                       key={mode}
@@ -1369,8 +1369,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
               </div>
 
               <p className="text-[10px] text-slate-500">
-                OCR never leaves your device. If it finds no text, TrueHalo sends
-                the screenshot instead so the question still works.
+                OCR never leaves your device. Text mode is faster and cheaper;
+                switch to Image when layout or colors matter.
               </p>
             </div>
 

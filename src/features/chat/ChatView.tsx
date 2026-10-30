@@ -157,6 +157,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
     compressed: boolean;
   } | null>(null);
   const [extractedText, setExtractedText] = useState<string | null>(null);
+  // What the next message sends: the compressed screenshot or the OCR text.
+  // The default comes from Settings → Screenshot input; the user picks per capture.
+  const [sendAs, setSendAs] = useState<"image" | "text">("image");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -234,31 +237,36 @@ export const ChatView: React.FC<ChatViewProps> = ({
           max_dimension: preset.maxDimension,
           quality: preset.quality,
           hide_window: settings.hideWindowOnCapture,
-          ocr: settings.textMode !== "image",
+          // Always recognize text: the user picks image or text per capture.
+          ocr: true,
         });
 
         if (result.status === "success") {
           const ocrText = result.ocr_text?.trim() ?? "";
-          const minimum = settings.textMode === "auto" ? 12 : 1;
-          const useText =
-            settings.textMode !== "image" && ocrText.length >= minimum;
-
-          if (useText) {
-            setExtractedText(ocrText);
-            setAttachedImage(null);
-          } else {
-            setExtractedText(null);
-            setAttachedImage({
-              data: result.base64_data,
-              mediaType: result.media_type,
-              previewUrl: `data:${result.media_type};base64,${result.base64_data}`,
-              bytes: result.file_size_bytes,
-              originalBytes: result.original_size_bytes,
-              width: result.width,
-              height: result.height,
-              compressed: result.compressed,
-            });
-          }
+          const hasText = ocrText.length >= 1;
+          setExtractedText(hasText ? ocrText : null);
+          setAttachedImage({
+            data: result.base64_data,
+            mediaType: result.media_type,
+            previewUrl: `data:${result.media_type};base64,${result.base64_data}`,
+            bytes: result.file_size_bytes,
+            originalBytes: result.original_size_bytes,
+            width: result.width,
+            height: result.height,
+            compressed: result.compressed,
+          });
+          // Default choice follows Settings; auto prefers text when OCR found any.
+          setSendAs(
+            settings.textMode === "image"
+              ? "image"
+              : settings.textMode === "text"
+                ? hasText
+                  ? "text"
+                  : "image"
+                : hasText && ocrText.length >= 12
+                  ? "text"
+                  : "image",
+          );
           // Make sure the user actually sees the captured overlay again.
           await tauriApi.showWindow();
         } else if (result.status === "permission_required") {
@@ -523,14 +531,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
     action?: QuickAction,
   ) => {
     const trimmed = (overridePrompt ?? inputPrompt).trim();
-    const ocrText = extractedText?.trim() ?? "";
-    if ((!trimmed && !attachedImage && !ocrText) || isStreaming) return;
+    const ocrText = sendAs === "text" ? (extractedText?.trim() ?? "") : "";
+    const sendImage = sendAs === "image" ? attachedImage : null;
+    if ((!trimmed && !sendImage && !ocrText) || isStreaming) return;
 
     // Sending a screenshot to a text-only model always fails with a provider
     // error, so catch it before the request leaves the app.
-    if (attachedImage && modelVision[`${activeProvider}:${activeModel}`] === false) {
+    if (sendImage && modelVision[`${activeProvider}:${activeModel}`] === false) {
       setErrorMessage(
-        `"${activeModel}" cannot read images. Pick a vision model in Settings, or use Text/OCR mode.`,
+        `"${activeModel}" cannot read images. Pick a vision model in Settings, or switch to Text.`,
       );
       return;
     }
@@ -543,11 +552,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
       contentParts.push({ type: "text", text });
     }
 
-    if (attachedImage) {
+    if (sendImage) {
       contentParts.push({
         type: "image_base64",
-        media_type: attachedImage.mediaType,
-        data: attachedImage.data,
+        media_type: sendImage.mediaType,
+        data: sendImage.data,
       });
     }
 
@@ -743,6 +752,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       setExtractedText(null);
+      setSendAs("image");
       const result = reader.result as string;
       const base64Data = result.split(",")[1];
 
@@ -1202,75 +1212,92 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         )}
 
-        {/* Local OCR preview */}
-        {extractedText !== null && (
-          <div className="mx-4 mb-2 p-2.5 rounded-lg bg-surface-card border border-sky-700/50 shadow-halo-sm">
+        {/* Capture choice: compressed screenshot or recognized text */}
+        {(attachedImage || extractedText !== null) && (
+          <div className="mx-4 mb-2 p-2.5 rounded-lg bg-surface-card border border-surface-border shadow-halo-sm">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-medium text-slate-100 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-sky-400" />
-                Text from screenshot · edit before sending
-              </span>
-              <button
-                onClick={() => setExtractedText(null)}
-                className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
-                title="Remove text"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/30 border border-surface-border">
+                <button
+                  onClick={() => setSendAs("image")}
+                  disabled={!attachedImage}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    sendAs === "image"
+                      ? "bg-halo-accent/80 text-white"
+                      : "text-slate-400 hover:text-slate-200 disabled:opacity-40"
+                  }`}
+                >
+                  Image
+                </button>
+                <button
+                  onClick={() => setSendAs("text")}
+                  disabled={extractedText === null}
+                  title={
+                    extractedText === null
+                      ? "No text recognized on this screenshot"
+                      : "Send the recognized text instead of the image"
+                  }
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    sendAs === "text"
+                      ? "bg-sky-600/80 text-white"
+                      : "text-slate-400 hover:text-slate-200 disabled:opacity-40"
+                  }`}
+                >
+                  Text
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleCapture(true)}
+                  className="px-2 py-1 text-xs text-slate-300 hover:text-white bg-surface-subtle hover:bg-surface-border rounded transition-colors"
+                  title="Retake screenshot"
+                >
+                  Retake
+                </button>
+                <button
+                  onClick={() => {
+                    setAttachedImage(null);
+                    setExtractedText(null);
+                  }}
+                  className="p-1 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                  title="Remove capture"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
-            <textarea
-              value={extractedText}
-              onChange={(e) => setExtractedText(e.target.value)}
-              rows={4}
-              className="w-full resize-y bg-black/30 border border-surface-border rounded-lg px-2.5 py-2 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-sky-600/60"
-            />
-            <p className="text-[10px] text-slate-500 mt-1">
-              Recognized on-device. Only this text is sent — the screenshot is discarded.
-            </p>
-          </div>
-        )}
 
-        {/* Screen Capture / File Preview */}
-        {attachedImage && (
-          <div className="mx-4 mb-2 p-2 rounded-lg bg-surface-card border border-halo-accent/50 flex items-center gap-3 shadow-halo-sm">
-            <img
-              src={attachedImage.previewUrl}
-              alt="Screenshot Preview"
-              className="w-14 h-14 object-contain bg-black/40 rounded border border-surface-border"
-            />
-            <div className="flex-1 text-xs min-w-0">
-              <span className="font-medium text-slate-100 flex items-center gap-1.5">
-                <Crop className="w-3.5 h-3.5 text-halo-accent" />
-                Screenshot attached
-              </span>
-              <p className="text-[11px] text-slate-400">
-                {attachedImage.width}×{attachedImage.height} px ·{" "}
-                {attachedImage.compressed ? (
-                  <>
-                    compressed {formatBytes(attachedImage.originalBytes)} →{" "}
-                    <span className="text-emerald-300">{formatBytes(attachedImage.bytes)}</span>
-                  </>
-                ) : (
-                  formatBytes(attachedImage.bytes)
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handleCapture(true)}
-                className="px-2 py-1 text-xs text-slate-300 hover:text-white bg-surface-subtle hover:bg-surface-border rounded transition-colors"
-                title="Retake screenshot"
-              >
-                Retake
-              </button>
-              <button
-                onClick={() => setAttachedImage(null)}
-                className="p-1.5 rounded-md text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
-                title="Remove image"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            {sendAs === "image" && attachedImage ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={attachedImage.previewUrl}
+                  alt="Screenshot Preview"
+                  className="w-14 h-14 object-contain bg-black/40 rounded border border-surface-border"
+                />
+                <p className="text-[11px] text-slate-400">
+                  {attachedImage.width}×{attachedImage.height} px ·{" "}
+                  {attachedImage.compressed ? (
+                    <>
+                      compressed {formatBytes(attachedImage.originalBytes)} →{" "}
+                      <span className="text-emerald-300">{formatBytes(attachedImage.bytes)}</span>
+                    </>
+                  ) : (
+                    formatBytes(attachedImage.bytes)
+                  )}
+                </p>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={extractedText ?? ""}
+                  onChange={(e) => setExtractedText(e.target.value)}
+                  rows={4}
+                  className="w-full resize-y bg-black/30 border border-surface-border rounded-lg px-2.5 py-2 text-[11px] font-mono text-slate-200 focus:outline-none focus:border-sky-600/60"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Recognized on-device. Only this text is sent — the screenshot is discarded.
+                </p>
+              </>
+            )}
           </div>
         )}
 

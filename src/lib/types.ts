@@ -98,7 +98,9 @@ export interface ScreenCaptureStatus {
 /** Compression preset for outgoing screenshots. */
 export type CompressionPreset = "quality" | "balanced" | "speed";
 
-/** How captured screenshots are sent to the model. */
+/** How captured screenshots are sent to the model. Since every capture keeps
+ * both the image and the OCR text, this is only the default for the per-capture
+ * Image / Text choice. */
 export type TextMode = "auto" | "image" | "text";
 
 /** One-click prompt applied to the current screenshot or recognized text. */
