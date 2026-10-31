@@ -7,6 +7,7 @@ import {
   ContentPart,
   ModelInfo,
   ModelPricing,
+  PROFILE_CONTEXT_LIMIT,
   ProviderId,
   QuickAction,
   SessionRecord,
@@ -553,6 +554,25 @@ export const ChatView: React.FC<ChatViewProps> = ({
     overridePrompt?: string,
     action?: QuickAction,
   ) => {
+    if (!activeModel.trim()) {
+      setErrorMessage("Pick a model in Settings first.");
+      return;
+    }
+
+    // The size cap is a promise, not a hint: over-limit profiles stay blocked
+    // until Unlimited is on or the files are trimmed.
+    if (activeProfile && !activeProfile.unlimited) {
+      const profileBytes =
+        activeProfile.system.length +
+        activeProfile.files.reduce((sum, file) => sum + file.content.length, 0);
+      if (profileBytes > PROFILE_CONTEXT_LIMIT) {
+        setErrorMessage(
+          `The "${activeProfile.name}" profile is over the ${(PROFILE_CONTEXT_LIMIT / 1024).toFixed(0)} KB cap. Enable Unlimited in Settings → Profiles, or trim its files.`,
+        );
+        return;
+      }
+    }
+
     const trimmed = (overridePrompt ?? inputPrompt).trim();
     const ocrText = sendAs === "text" ? (extractedText?.trim() ?? "") : "";
     const sendImage = sendAs === "image" ? attachedImage : null;

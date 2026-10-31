@@ -368,7 +368,7 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building TrueHalo application");
 
-    app.run(|_app_handle, event| match event {
+    app.run(|app_handle, event| match event {
         tauri::RunEvent::ExitRequested { code, api, .. } => {
             if code.is_none() {
                 // `None` means "the last window went away", not an explicit quit.
@@ -377,11 +377,36 @@ pub fn run() {
                 api.prevent_exit();
             } else {
                 tracing::info!("Exit requested with code {:?}", code);
+                clear_history_if_ephemeral(app_handle);
             }
         }
-        tauri::RunEvent::Exit => tracing::info!("TrueHalo exiting"),
+        tauri::RunEvent::Exit => {
+            tracing::info!("TrueHalo exiting");
+            clear_history_if_ephemeral(app_handle);
+        }
         _ => {}
     });
+}
+
+/// Delete all chats on quit when ephemeral history is on.
+///
+/// The frontend also clears on the next start, but that leaves the previous
+/// session on disk in between — a real quit must wipe it immediately.
+fn clear_history_if_ephemeral(app: &tauri::AppHandle) {
+    let ephemeral = app
+        .try_state::<AppState>()
+        .and_then(|state| state.db.get_preference("ephemeral_history").ok())
+        .flatten()
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    if ephemeral {
+        if let Some(state) = app.try_state::<AppState>() {
+            match state.db.clear_all_history() {
+                Ok(()) => tracing::info!("Ephemeral history cleared on quit"),
+                Err(e) => tracing::warn!("Could not clear ephemeral history: {}", e),
+            }
+        }
+    }
 }
 
 /// Initialise tracing to both stderr and a rotating log file.

@@ -4,6 +4,12 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-10-31
+
+### Fixed
+- Ephemeral history now wipes chats the moment the app quits, not on the next start.
+- Sending is blocked when no model is selected, and over-limit profiles stay blocked until Unlimited is on or their files are trimmed.
+
 ## [0.3.0] — 2026-10-30
 
 ### Added
