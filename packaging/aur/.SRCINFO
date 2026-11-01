@@ -1,0 +1,18 @@
+pkgbase = truehalo-bin
+	pkgdesc = Native, privacy-first AI screen overlay for desktop
+	pkgver = 0.3.1
+	pkgrel = 1
+	url = https://github.com/Neksand/TrueHalo
+	arch = x86_64
+	license = GPL-3.0-only
+	depends = gtk3
+	depends = webkit2gtk-4.1
+	depends = libayatana-appindicator
+	depends = librsvg
+	depends = openssl
+	provides = truehalo
+	conflicts = truehalo
+	source = https://github.com/Neksand/TrueHalo/releases/download/v0.3.1/TrueHalo_0.3.1_amd64.deb
+	sha256sums = ef3ddd20a820dd2224e3e32dbf6232cc49b24e82739d7d2bbfbdeb688533566e
+
+pkgname = truehalo-bin

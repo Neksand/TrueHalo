@@ -11,7 +11,7 @@ Press a hotkey, grab a region, and get an answer in a floating window — in any
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
 [![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust)](https://www.rust-lang.org)
 [![Release](https://img.shields.io/github/v/release/Neksand/TrueHalo?color=fbbf24&label=release)](https://github.com/Neksand/TrueHalo/releases)
-[![Platform](https://img.shields.io/badge/platform-macOS%20arm64%20%7C%20Windows%20x64-111827)](#platform-support)
+[![Platform](https://img.shields.io/badge/platform-macOS%20arm64%20%7C%20Windows%20x64%20%7C%20Linux%20x64-111827)](#platform-support)
 [![Size](https://img.shields.io/badge/app-9%20MB-fbbf24)](#why-truehalo-is-small)
 
 [Watch the demo](#watch-the-demo) · [Features](#features) · [Install](#install) · [Comparison](#truehalo-vs-cheating-daddy) · [Roadmap](#roadmap)
@@ -168,7 +168,7 @@ providers, and no continuous audio or screen capture.
 | Assistant profiles | 5 fixed presets | free-form chat now · **context injection planned** |
 | Overlay privacy | transparent, click-through | hidden from recorders, tray mode |
 | API key storage | — | system credential store, never in the UI |
-| Platforms | macOS · Windows · Linux | macOS (Apple Silicon) · Windows (x64) |
+| Platforms | macOS · Windows · Linux | macOS (Apple Silicon) · Windows (x64) · Linux (x64) |
 | License | GPL-3.0 | GPL-3.0 |
 
 ## Platform support
@@ -177,9 +177,18 @@ providers, and no continuous audio or screen capture.
 |---|---|---|
 | macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.3.1-Installer.dmg` |
 | Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.3.1_x64-setup.exe` |
+| Ubuntu 22.04+ / Debian 12+ · x64 | ✅ Available | `TrueHalo_0.3.1_amd64.deb` or `TrueHalo_0.3.1_amd64.AppImage` |
 
 The React UI and the Rust core are shared. The macOS backend uses AppKit and the Keychain; the Windows
-backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager.
+backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager; the Linux backend uses
+the Desktop Portal for capture and Secret Service (with a locked-down file fallback) for keys.
+
+Linux notes: capture goes through `xdg-desktop-portal` (present on GNOME/KDE out of the box; on
+minimal window managers install `xdg-desktop-portal` plus a backend). Global shortcuts need X11 or a
+compositor that forwards them; the tray icon and capture buttons always work. Screen-recording
+exclusion has no Linux equivalent, so that switch stays off. Arch users: a
+[`truehalo-bin`](https://aur.archlinux.org/packages/truehalo-bin) AUR package is in progress
+(`packaging/aur`); until it lands, use the `.deb` or AppImage from Releases.
 
 ## Install
 
@@ -225,7 +234,22 @@ WebView2 automatically if it is missing.
 Screen-recording exclusion needs Windows 10 2004+. On older builds TrueHalo keeps the switch off
 instead of drawing a black rectangle in recordings.
 
-### First run (both platforms)
+### Linux (x64)
+
+**You need:** Ubuntu 22.04+ or Debian 12+ (or any distro with WebKitGTK 4.1 and an appindicator
+library), plus `xdg-desktop-portal` running in the session for screenshots.
+
+1. Download `TrueHalo_0.3.1_amd64.deb` or `TrueHalo_0.3.1_amd64.AppImage` from
+   [Releases](https://github.com/Neksand/TrueHalo/releases).
+2. `.deb`: `sudo apt install ./TrueHalo_0.3.1_amd64.deb`, then launch **TrueHalo** from the app menu.
+   AppImage: `chmod +x TrueHalo_0.3.1_amd64.AppImage && ./TrueHalo_0.3.1_amd64.AppImage`.
+3. API keys live in Secret Service (GNOME Keyring / KWallet unlocks it automatically). On systems
+   without a keyring daemon, keys fall back to `0600` files under
+   `~/.local/share/truehalo/credentials/`.
+
+The AppImage (~84 MB) bundles the system WebView; the `.deb` (~5.7 MB) uses the distro's.
+
+### First run (all platforms)
 
 1. Click the gear icon → **AI Providers & Models**.
 2. Paste an API key for a provider you already use:
