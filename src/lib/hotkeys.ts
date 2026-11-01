@@ -10,7 +10,11 @@
 export const IS_WINDOWS =
   typeof navigator !== "undefined" && /Windows/i.test(navigator.userAgent);
 
-const isWindows = IS_WINDOWS;
+/** macOS keyboards print ⌥⇧⌃⌘; everywhere else use Alt/Shift/Ctrl names. */
+export const IS_MACOS =
+  typeof navigator !== "undefined" && /Mac/i.test(navigator.userAgent);
+
+const useGlyphs = IS_MACOS;
 
 /**
  * Format a stored Tauri accelerator for display.
@@ -24,7 +28,7 @@ export function formatHotkey(accelerator: string, compact = false): string {
     .map((part) => keyLabel(part.trim()))
     .filter(Boolean);
 
-  if (!isWindows) {
+  if (useGlyphs) {
     const glyphs = parts.map((part) => {
       switch (part) {
         case "Alt":

@@ -9,3 +9,7 @@ pub mod keychain;
 #[cfg(windows)]
 #[path = "windows_store.rs"]
 pub mod keychain;
+
+#[cfg(target_os = "linux")]
+#[path = "linux_store.rs"]
+pub mod keychain;

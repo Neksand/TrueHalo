@@ -210,6 +210,14 @@ pub fn set_screen_recording_protection(app: AppHandle, exclude: bool) -> Result<
     apply_capture_exclusion(&app, exclude)
 }
 
+/// Linux: no compositor-independent exclusion API exists, so the switch stays
+/// off and the UI reflects that instead of pretending otherwise.
+#[cfg(target_os = "linux")]
+fn apply_capture_exclusion(app: &AppHandle, _exclude: bool) -> Result<bool, String> {
+    let _ = app;
+    Ok(false)
+}
+
 /// Windows: hide the window from screen capture APIs.
 ///
 /// `WDA_EXCLUDEFROMCAPTURE` removes the window from recordings entirely, so the

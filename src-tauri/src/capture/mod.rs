@@ -13,6 +13,10 @@ mod platform;
 #[path = "windows.rs"]
 mod platform;
 
+#[cfg(target_os = "linux")]
+#[path = "linux.rs"]
+mod platform;
+
 /// Options for a single screen capture request coming from the frontend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]

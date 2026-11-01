@@ -559,6 +559,7 @@ fn restore_window_geometry(app: &tauri::AppHandle, db: &DatabaseManager) {
 }
 
 /// Apply the native backdrop material behind the overlay.
+#[allow(unused_variables)]
 fn apply_vibrancy(window: &tauri::WebviewWindow) {
     #[cfg(target_os = "macos")]
     {

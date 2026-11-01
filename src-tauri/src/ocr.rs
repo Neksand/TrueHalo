@@ -1,6 +1,8 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use std::path::{Path, PathBuf};
+#[cfg(any(target_os = "macos", windows))]
 use std::time::Duration;
+#[cfg(any(target_os = "macos", windows))]
 use tokio::process::Command;
 
 /// Recognize text in a captured screenshot with the OS OCR engine.
@@ -170,6 +172,7 @@ async fn recognize_file(_path: &Path) -> Result<String, String> {
     Err("Local OCR is not supported on this platform".to_string())
 }
 
+#[cfg(any(target_os = "macos", windows))]
 async fn run_with_timeout(command: &mut Command) -> Result<std::process::Output, String> {
     command.kill_on_drop(true);
     match tokio::time::timeout(Duration::from_secs(15), command.output()).await {
