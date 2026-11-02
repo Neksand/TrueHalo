@@ -17,7 +17,7 @@ import { profileContextText } from "../../lib/profiles";
 import { tauriApi } from "../../lib/tauri";
 import { formatHotkey } from "../../lib/hotkeys";
 import { BUILT_IN_ACTIONS } from "../../lib/quickActions";
-import { costForTokens, formatUsd } from "../../lib/pricing";
+import { costForTokens, estimateRequestTokens, formatUsd, trimToBudget } from "../../lib/pricing";
 import { MarkdownRenderer } from "../../components/markdown/MarkdownRenderer";
 import {
   Send,
@@ -105,6 +105,54 @@ const dropImages = (parts: ContentPart[]): ContentPart[] =>
       ? { type: "text" as const, text: "[screenshot not stored]" }
       : part,
   );
+
+/**
+ * Live estimate of the next request size. Counts the typed prompt, the
+ * pending capture in its chosen format, and one turn of history as a proxy —
+ * the exact trim happens at send time.
+ */
+const PendingTokens: React.FC<{
+  inputPrompt: string;
+  attachedImage: { data: string; mediaType: string } | null;
+  extractedText: string | null;
+  sendAs: "image" | "text";
+  messageCount: number;
+  budget: number;
+}> = ({ inputPrompt, attachedImage, extractedText, sendAs, messageCount, budget }) => {
+  const estimate = useMemo(() => {
+    const parts: ContentPart[] = [];
+    const text = [
+      inputPrompt.trim(),
+      sendAs === "text" ? (extractedText?.trim() ?? "") : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+    if (text) parts.push({ type: "text", text });
+    if (sendAs === "image" && attachedImage) {
+      parts.push({
+        type: "image_base64",
+        media_type: attachedImage.mediaType,
+        data: attachedImage.data,
+      });
+    }
+    return estimateRequestTokens([{ content: parts }]);
+  }, [inputPrompt, attachedImage, extractedText, sendAs]);
+
+  if (estimate === 0 && messageCount === 0) return null;
+  const over = estimate > budget;
+  return (
+    <span
+      className={`font-mono ${over ? "text-amber-300" : ""}`}
+      title={
+        over
+          ? "Over budget — older turns will be trimmed on send"
+          : "Estimated tokens for the next request"
+      }
+    >
+      ≈{(estimate / 1000).toFixed(1)}k / {(budget / 1000).toFixed(0)}k
+    </span>
+  );
+};
 
 const contentToText = (contentJson: string): string => {
   try {
@@ -726,34 +774,45 @@ export const ChatView: React.FC<ChatViewProps> = ({
       // Start stream — only the newest screenshot is sent, older ones are dropped
       // so long conversations stay cheap. The active profile (if any) goes
       // first as the system message; file contents stay on device except for
-      // this request to the selected provider.
+      // this request to the selected provider. Old turns beyond the token
+      // budget are dropped oldest-first.
       const profileText = activeProfile ? profileContextText(activeProfile) : "";
+      const outgoing = [
+        ...(profileText
+          ? [
+              {
+                role: "system" as const,
+                content: [{ type: "text" as const, text: profileText }],
+              },
+            ]
+          : []),
+        ...(action?.system
+          ? [
+              {
+                role: "system" as const,
+                content: [{ type: "text" as const, text: action.system }],
+              },
+            ]
+          : []),
+        ...stripOlderImages(newHistory).map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      ];
+      const { messages: budgeted, trimmed } = trimToBudget(
+        outgoing,
+        settings.tokenBudget,
+      );
+      if (trimmed > 0) {
+        setToast({
+          text: `Trimmed ${trimmed} older ${trimmed === 1 ? "turn" : "turns"} to fit the token budget`,
+        });
+      }
       await tauriApi.startStream({
         stream_id: streamId,
         provider: activeProvider,
         model: activeModel,
-        messages: [
-          ...(profileText
-            ? [
-                {
-                  role: "system" as const,
-                  content: [{ type: "text" as const, text: profileText }],
-                },
-              ]
-            : []),
-          ...(action?.system
-            ? [
-                {
-                  role: "system" as const,
-                  content: [{ type: "text" as const, text: action.system }],
-                },
-              ]
-            : []),
-          ...stripOlderImages(newHistory).map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        ],
+        messages: budgeted,
       });
     } catch (err: any) {
       setIsStreaming(false);
@@ -1494,6 +1553,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
           <div className="max-w-3xl mx-auto mt-1 px-1 flex justify-between items-center text-[10px] text-slate-500">
             <span>Enter to send · Shift+Enter for newline · Esc to Quick Hide</span>
+            <PendingTokens
+              inputPrompt={inputPrompt}
+              attachedImage={attachedImage}
+              extractedText={extractedText}
+              sendAs={sendAs}
+              messageCount={messages.length}
+              budget={settings.tokenBudget}
+            />
             <span>{hotkeys.toggleCompact}: Toggle · {hotkeys.region}: Region · {hotkeys.fullscreen}: Fullscreen</span>
           </div>
         </div>

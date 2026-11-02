@@ -5,7 +5,8 @@
 # TrueHalo
 
 **A native AI overlay that answers questions about what is on your screen.**<br/>
-Press a hotkey, grab a region, and get an answer in a floating window — in any app, on macOS and Windows.
+For people working with documents, code, and translations: press a hotkey, grab a region, and get
+a fast answer in a floating window — in any app, on macOS, Windows, and Linux.
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue)](https://www.gnu.org/licenses/gpl-3.0)
 [![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
@@ -14,7 +15,7 @@ Press a hotkey, grab a region, and get an answer in a floating window — in any
 [![Platform](https://img.shields.io/badge/platform-macOS%20arm64%20%7C%20Windows%20x64%20%7C%20Linux%20x64-111827)](#platform-support)
 [![Size](https://img.shields.io/badge/app-9%20MB-fbbf24)](#why-truehalo-is-small)
 
-[Watch the demo](#watch-the-demo) · [Features](#features) · [Install](#install) · [Comparison](#truehalo-vs-cheating-daddy) · [Roadmap](#roadmap)
+[Watch the demo](#watch-the-demo) · [Features](#features) · [Install](#install) · [Comparison](#truehalo-vs-electron-overlays) · [Roadmap](#roadmap)
 
 </div>
 
@@ -30,16 +31,21 @@ Press a hotkey, grab a region, and get an answer in a floating window — in any
   <sub>▶ <a href="docs/media/truehalo-launch.mp4"><b>Watch the 37-second launch film</b></a> (1080p, with sound)</sub>
 </p>
 
-> **Not a cheating tool.** TrueHalo is a lightweight productivity overlay: it answers only what you
-> explicitly ask about, one screenshot at a time. The window-exclusion feature exists for privacy —
-> the same reason API keys stay in the system credential store and the app never sends telemetry.
-> Do not use it to misrepresent your work where independent performance is required.
+> **Not a cheating tool.** TrueHalo is a lightweight productivity overlay for people who work
+> with documents, code, and translations and need a fast answer about what's on screen. It answers
+> only what you explicitly ask about, one screenshot at a time. The window-exclusion feature exists
+> for privacy — the same reason API keys stay in the system credential store and the app never sends
+> telemetry.
+>
+> TrueHalo **must not be used to misrepresent your work** — not in exams, interviews, hiring screens,
+> or any proctored assessment. The project does not support, condone, or facilitate cheating.
 
 ## What is TrueHalo?
 
-TrueHalo is a small desktop app that sits on top of everything you do. When you need help with
-something on screen — an error, a chart, a piece of code, a form — you press one hotkey, drag a box
-around it, and ask a question. The answer appears in a translucent window that stays on top.
+TrueHalo is a small desktop app for people who work with documents, code, and translations. When
+you need a fast answer about something on screen — an error, a paragraph to translate, a piece of
+code, a form — you press one hotkey, drag a box around it, and ask a question. The answer appears in
+a translucent window that stays on top.
 
 It is **not** a background recorder or an always-listening assistant:
 
@@ -47,12 +53,17 @@ It is **not** a background recorder or an always-listening assistant:
 - **You choose the model.** Bring an API key from OpenRouter, Google Gemini or OpenAI — or run models locally with Ollama.
 - **Your keys stay in the OS.** They live in the system credential store and never reach the UI layer.
 
-Typical uses: debugging code, reading dense documentation, understanding dashboards, translating an
-error message, or summarising a long page you are allowed to look at.
+Typical uses: reading dense documentation, debugging code, translating an error message or a
+paragraph, or summarising a long page you are allowed to look at.
+
+## What's new in 0.4.0
+
+Current release: **0.4.0** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
+
+- **Token budget** — a live estimate under the message box and automatic oldest-first trimming of long threads. System instructions and your newest message always survive.
+- **Clear positioning** — TrueHalo is for documents, code, and translations; hard no to cheating use.
 
 ## What's new in 0.3.1
-
-Current release: **0.3.1** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
 
 - **Ephemeral history that means it** — chats are wiped the moment the app quits, not on the next start.
 - **Send guards** — no requests without a model selected, and over-limit profiles stay blocked until Unlimited is on or files are trimmed.
@@ -152,32 +163,30 @@ window. TrueHalo is written in Rust and uses the WebView that your operating sys
 - **Remembers its place** — position, size and settings are stored locally in SQLite.
 - **No telemetry, no accounts, no analytics.**
 
-## TrueHalo vs Cheating Daddy
+## TrueHalo vs Electron overlays
 
-[Cheating Daddy](https://github.com/sohzm/cheating-daddy) popularised the idea of an AI overlay.
-TrueHalo is an **independent implementation** with a different trade-off: a much smaller app, your own
-providers, and no continuous audio or screen capture.
+Most AI overlays ship a whole Chromium browser just to draw one window. TrueHalo uses the WebView
+your operating system already has, sends nothing in the background, and keeps your keys in the OS
+credential store.
 
-| | Cheating Daddy | TrueHalo |
+| | Typical Electron overlay | TrueHalo |
 |---|---|---|
-| Runtime | Electron | Tauri 2 (Rust + system WebView) |
-| Download | Electron bundle | **6.8 MB DMG · 3.8 MB EXE** |
-| AI providers | Google Gemini Live | OpenRouter · Google Gemini · OpenAI |
-| Screen analysis | continuous during a session | on demand, per hotkey |
-| Audio capture | system audio + microphone | not included, by design |
-| Assistant profiles | 5 fixed presets | free-form chat now · **context injection planned** |
-| Overlay privacy | transparent, click-through | hidden from recorders, tray mode |
-| API key storage | — | system credential store, never in the UI |
-| Platforms | macOS · Windows · Linux | macOS (Apple Silicon) · Windows (x64) · Linux (x64) |
-| License | GPL-3.0 | GPL-3.0 |
+| Runtime | bundled Chromium | Tauri 2 (Rust + system WebView) |
+| Download | 200+ MB | **6.8 MB DMG · 3.8 MB EXE** |
+| Installed app | 300–500 MB | **~9 MB** |
+| Capture | often continuous or session-based | on demand, one hotkey at a time |
+| Audio capture | usually bundled | not included, by design |
+| API key storage | config files | system credential store, never in the UI |
+| Telemetry | varies | none |
+| License | varies | GPL-3.0 |
 
 ## Platform support
 
 | Platform | Status | Installer |
 |---|---|---|
-| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.3.1-Installer.dmg` |
-| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.3.1_x64-setup.exe` |
-| Ubuntu 22.04+ / Debian 12+ · x64 | ✅ Available | `TrueHalo_0.3.1_amd64.deb` or `TrueHalo_0.3.1_amd64.AppImage` |
+| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.4.0-Installer.dmg` |
+| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.4.0_x64-setup.exe` |
+| Ubuntu 22.04+ / Debian 12+ · x64 | ✅ Available | `TrueHalo_0.4.0_amd64.deb` or `TrueHalo_0.4.0_amd64.AppImage` |
 
 The React UI and the Rust core are shared. The macOS backend uses AppKit and the Keychain; the Windows
 backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager; the Linux backend uses
@@ -196,7 +205,7 @@ exclusion has no Linux equivalent, so that switch stays off. Arch users: a
 
 **You need:** macOS 13 Ventura or newer on an M1/M2/M3/M4 Mac.
 
-1. Download `TrueHalo-0.3.1-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo-0.4.0-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Open the DMG and drag **TrueHalo** into **Applications**.
 3. Launch it. macOS will say it cannot verify the app — this is normal, because the build is signed
    with a local certificate instead of a paid Apple Developer ID.
@@ -225,7 +234,7 @@ exclusion has no Linux equivalent, so that switch stays off. Arch users: a
 **You need:** Windows 10 version 2004 (build 19041) or newer, or Windows 11. The installer downloads
 WebView2 automatically if it is missing.
 
-1. Download `TrueHalo_0.3.1_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo_0.4.0_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Run it. If SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** — the
    installer is not signed with a commercial certificate.
 3. Launch TrueHalo from the Start menu or the tray icon. Windows has no screen-recording permission,
@@ -239,10 +248,10 @@ instead of drawing a black rectangle in recordings.
 **You need:** Ubuntu 22.04+ or Debian 12+ (or any distro with WebKitGTK 4.1 and an appindicator
 library), plus `xdg-desktop-portal` running in the session for screenshots.
 
-1. Download `TrueHalo_0.3.1_amd64.deb` or `TrueHalo_0.3.1_amd64.AppImage` from
+1. Download `TrueHalo_0.4.0_amd64.deb` or `TrueHalo_0.4.0_amd64.AppImage` from
    [Releases](https://github.com/Neksand/TrueHalo/releases).
-2. `.deb`: `sudo apt install ./TrueHalo_0.3.1_amd64.deb`, then launch **TrueHalo** from the app menu.
-   AppImage: `chmod +x TrueHalo_0.3.1_amd64.AppImage && ./TrueHalo_0.3.1_amd64.AppImage`.
+2. `.deb`: `sudo apt install ./TrueHalo_0.4.0_amd64.deb`, then launch **TrueHalo** from the app menu.
+   AppImage: `chmod +x TrueHalo_0.4.0_amd64.AppImage && ./TrueHalo_0.4.0_amd64.AppImage`.
 3. API keys live in Secret Service (GNOME Keyring / KWallet unlocks it automatically). On systems
    without a keyring daemon, keys fall back to `0600` files under
    `~/.local/share/truehalo/credentials/`.
@@ -332,14 +341,12 @@ Shipped:
 - [x] Local OCR text mode with editable preview and image fallback
 - [x] Built-in and custom Quick Actions
 - [x] Usage tab with token counts, estimated cost and a 7-day chart
+- [x] Assistant profiles with context injection (instructions + files)
+- [x] Click-through mode
+- [x] Local models via Ollama / OpenAI-compatible servers
+- [x] Token budget with oldest-first trimming and a live estimate
 
 Next, in order of expected impact:
-
-- [ ] **Assistant profiles with context injection** — upload a résumé, a product brief, a runbook or
-      a few notes, and every answer will use that knowledge. Your context instead of a fixed preset.
-      *Not shipped yet; in design.*
-- [ ] **Smart token optimization** — reuse and deduplicate visual context so requests cost fewer
-      tokens **without lowering answer quality**.
 - [ ] **Major performance optimization** — further reduce CPU and RAM use while capturing and while
       streaming.
 - [ ] Code signing for both platforms (Apple Developer ID, Authenticode)
@@ -399,13 +406,13 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 ## Credits
 
-- Inspired by **[Cheating Daddy](https://github.com/sohzm/cheating-daddy)** by
-  [@sohzm](https://github.com/sohzm). TrueHalo is an independent implementation and shares no code
-  with it; the comparison above is based on its public README.
 - Built with [Tauri](https://tauri.app), [React](https://react.dev) and
   [Tailwind CSS](https://tailwindcss.com).
 
 ## License
+
+Misuse for cheating in exams, interviews, or proctored assessments is against the purpose of this
+project. See the notice at the top of this README.
 
 GPL-3.0 © TrueHalo contributors.
 

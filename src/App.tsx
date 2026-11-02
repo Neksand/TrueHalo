@@ -34,6 +34,7 @@ const PREF_KEYS: Record<keyof AppSettings, string> = {
   keepImagesInHistory: "keep_images_in_history",
   ephemeralHistory: "ephemeral_history",
   localEndpoint: "local_endpoint",
+  tokenBudget: "token_budget",
   hotkeyToggle: "hotkey_toggle",
   hotkeyRegion: "hotkey_region",
   hotkeyFullscreen: "hotkey_fullscreen",
@@ -109,6 +110,7 @@ export const App: React.FC = () => {
           keepImagesPref,
           ephemeralPref,
           localEndpointPref,
+          tokenBudgetPref,
         ] = await Promise.all([
           tauriApi.getPreference("active_provider"),
           tauriApi.getPreference("active_model"),
@@ -132,6 +134,7 @@ export const App: React.FC = () => {
           tauriApi.getPreference(PREF_KEYS.keepImagesInHistory),
           tauriApi.getPreference(PREF_KEYS.ephemeralHistory),
           tauriApi.getPreference(PREF_KEYS.localEndpoint),
+          tauriApi.getPreference(PREF_KEYS.tokenBudget),
         ]);
 
         setCustomActions(parseCustomActions(customActionsPref));
@@ -198,6 +201,12 @@ export const App: React.FC = () => {
               : DEFAULT_SETTINGS.ephemeralHistory,
           localEndpoint:
             localEndpointPref?.trim() || DEFAULT_SETTINGS.localEndpoint,
+          tokenBudget: (() => {
+            const parsed = tokenBudgetPref ? parseInt(tokenBudgetPref, 10) : NaN;
+            return Number.isFinite(parsed) && parsed > 0
+              ? parsed
+              : DEFAULT_SETTINGS.tokenBudget;
+          })(),
           hotkeyToggle: hotkeyTogglePref || DEFAULT_SETTINGS.hotkeyToggle,
           hotkeyRegion: hotkeyRegionPref || DEFAULT_SETTINGS.hotkeyRegion,
           hotkeyFullscreen: hotkeyFullscreenPref || DEFAULT_SETTINGS.hotkeyFullscreen,

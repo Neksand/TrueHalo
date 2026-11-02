@@ -1832,6 +1832,34 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                 </label>
               </div>
 
+              <div className="p-4 rounded-xl border border-surface-border bg-surface-subtle/30 space-y-4">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-200">Request token budget:</span>
+                  <span className="font-mono text-halo-accent font-semibold text-sm">
+                    {(settings.tokenBudget / 1000).toFixed(0)}k
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="1000"
+                  max="32000"
+                  step="1000"
+                  value={settings.tokenBudget}
+                  onChange={(e) => onChangeSettings({ tokenBudget: parseInt(e.target.value, 10) })}
+                  className="w-full h-2 bg-[#0b0c10] rounded-lg appearance-none cursor-pointer accent-halo-accent"
+                />
+
+                <div className="flex justify-between text-[11px] text-slate-500">
+                  <span>1k (short answers)</span>
+                  <span>32k (long threads)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Older turns beyond the budget are dropped oldest-first before
+                  each request. System instructions and your newest message always survive.
+                </p>
+              </div>
+
               <button
                 onClick={async () => {
                   if (!confirm("Delete the entire local chat history?")) return;

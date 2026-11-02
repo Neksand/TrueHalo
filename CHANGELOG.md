@@ -4,6 +4,14 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-11-02
+
+### Added
+- Token budget: a live per-request estimate under the message box and automatic oldest-first trimming of history beyond the budget (1k–32k, default 8k). System instructions and the newest message always survive.
+
+### Changed
+- README positioning: TrueHalo is for documents, code, and translations; the cheating comparison is gone, replaced by an Electron-overlays comparison and an explicit no-cheating notice.
+
 ## [0.3.1] — 2026-10-31
 
 ### Added

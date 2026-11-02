@@ -126,6 +126,8 @@ export interface AppSettings {
   keepImagesInHistory: boolean;
   ephemeralHistory: boolean;
   localEndpoint: string;
+  /** Max estimated tokens per request; older turns are dropped first. */
+  tokenBudget: number;
   /** Tauri accelerator strings, e.g. "Alt+Shift+Digit2". */
   hotkeyToggle: string;
   hotkeyRegion: string;
@@ -176,6 +178,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   keepImagesInHistory: true,
   ephemeralHistory: false,
   localEndpoint: "http://localhost:11434/v1",
+  tokenBudget: 8000,
   hotkeyToggle: "Alt+Space",
   hotkeyRegion: "Alt+Shift+Digit2",
   hotkeyFullscreen: "Alt+Shift+Digit3",

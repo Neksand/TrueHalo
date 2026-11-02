@@ -1,16 +1,20 @@
-## TrueHalo v0.3.1
+## TrueHalo v0.4.0
 
-**Release date:** 2026-10-31 · **License:** GPL-3.0-only · **Platforms:** macOS Apple Silicon (arm64) · Windows x64
+**Release date:** 2026-11-02 · **License:** GPL-3.0-only · **Platforms:** macOS Apple Silicon (arm64) · Windows x64 · Linux x64
 
-### Fixed
+### Added
 
-- **Ephemeral history that means it** — chats are deleted the moment the app quits, not on the next start.
-- **Send guards** — requests are blocked when no model is selected, and over-limit profiles stay blocked until Unlimited is on or their files are trimmed.
+- **Token budget** — a live per-request token estimate under the message box and automatic oldest-first trimming of history beyond the budget (1k–32k, default 8k). System instructions and your newest message always survive.
+
+### Changed
+
+- **Clear positioning** — the README now states plainly that TrueHalo is for documents, code, and translations, must not be used for cheating, and no longer references cheating tools. The comparison table now covers Electron overlays instead.
 
 ### Install
 
-- macOS (arm64): `TrueHalo-0.3.1-Installer.dmg`
-- Windows (x64): `TrueHalo_0.3.1_x64-setup.exe`
+- macOS (arm64): `TrueHalo-0.4.0-Installer.dmg`
+- Windows (x64): `TrueHalo_0.4.0_x64-setup.exe`
+- Linux (x64): `TrueHalo_0.4.0_amd64.deb` or `TrueHalo_0.4.0_amd64.AppImage`
 
 ### Verification
 
