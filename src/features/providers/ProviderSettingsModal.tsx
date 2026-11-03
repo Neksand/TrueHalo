@@ -15,6 +15,7 @@ import {
   estimateProfileTokens,
 } from "../../lib/types";
 import { tauriApi } from "../../lib/tauri";
+import { checkForUpdate, UpdateInfo } from "../../lib/updater";
 import { formatHotkey, IS_WINDOWS } from "../../lib/hotkeys";
 import { BUILT_IN_ACTIONS } from "../../lib/quickActions";
 import { PROVIDERS } from "../../lib/providers";
@@ -207,6 +208,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   const [usageError, setUsageError] = useState<string | null>(null);
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPricing>>({});
   const [appVersion, setAppVersion] = useState("");
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileSystem, setProfileSystem] = useState("");
   const [localEndpointInput, setLocalEndpointInput] = useState("");
@@ -1876,13 +1879,40 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
         )}
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-surface-border bg-surface-subtle/50 flex items-center justify-between">
-          <span className="text-[11px] text-slate-500 font-mono">
+        <div className="px-6 py-3 border-t border-surface-border bg-surface-subtle/50 flex items-center justify-between gap-3">
+          <span className="text-[11px] text-slate-500 font-mono shrink-0">
             TrueHalo {appVersion || "…"}
           </span>
+          {update?.available ? (
+            <button
+              onClick={() => handleOpenExternal(update.url)}
+              className="text-[11px] text-halo-accent hover:underline truncate"
+            >
+              v{update.latest} available → Download
+            </button>
+          ) : update ? (
+            <span className="text-[11px] text-slate-500">Up to date</span>
+          ) : (
+            <button
+              onClick={async () => {
+                if (!appVersion || checkingUpdate) return;
+                setCheckingUpdate(true);
+                try {
+                  setUpdate(await checkForUpdate(appVersion));
+                } catch {
+                  setUpdate(null);
+                } finally {
+                  setCheckingUpdate(false);
+                }
+              }}
+              className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              {checkingUpdate ? "Checking…" : "Check for updates"}
+            </button>
+          )}
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-surface-subtle hover:bg-surface-border text-slate-200 text-xs font-medium rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-surface-subtle hover:bg-surface-border text-slate-200 text-xs font-medium rounded-lg transition-colors shrink-0"
           >
             Done
           </button>
