@@ -56,6 +56,10 @@ It is **not** a background recorder or an always-listening assistant:
 Typical uses: reading dense documentation, debugging code, translating an error message or a
 paragraph, or summarising a long page you are allowed to look at.
 
+## Unreleased
+
+- **Check for updates** — Settings footer compares the running version to the latest GitHub release and links to the download when a newer build exists. Manual install, no auto-download.
+
 ## What's new in 0.4.0
 
 Current release: **0.4.0** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
