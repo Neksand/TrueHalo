@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -66,7 +66,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -123,7 +123,7 @@ jobs:
             libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
             libclang-dev libxcb1-dev libxrandr-dev libdbus-1-dev
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
