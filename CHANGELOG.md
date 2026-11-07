@@ -4,6 +4,23 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] — 2026-11-07
+
+### Added
+- Check for updates in the Settings footer: compares the running version to the latest GitHub release and links to the download when a newer build exists. Manual install, no auto-download.
+- Frontend lint (ESLint) and a Vitest suite covering the updater and token budgeting; CI now gates formatting, lint and frontend tests on macOS, Windows and Linux.
+
+### Changed
+- CI uses Node 24 LTS (Node 20 is end-of-life). Dependabot watches npm, Cargo and GitHub Actions weekly.
+- Frontend toolchain upgraded to Vite 8, Vitest 5 and ESLint 10; `npm audit` reports no vulnerabilities.
+- Update checks time out after 8 seconds and report failure instead of silently doing nothing.
+- Removed the unused release-notes payload from the update check.
+
+### Fixed
+- AUR `.SRCINFO` pointed at the v0.3.1 tag for the 0.4.0 `.deb`, so `truehalo-bin` could not build.
+- `cargo fmt --check` now passes (formatting drift in `ai/local.rs` and `auth/linux_store.rs`).
+- README roadmap no longer lists already-shipped features as upcoming; ARCHITECTURE.md documents the Linux backend.
+
 ## [0.4.0] — 2026-11-02
 
 ### Added

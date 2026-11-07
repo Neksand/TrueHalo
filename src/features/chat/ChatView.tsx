@@ -480,7 +480,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     try {
       const dbMsgs = await tauriApi.getSessionMessages(session.id);
       const parsed: ChatMessage[] = dbMsgs.map((m) => {
-        let content: ContentPart[] = [];
+        let content: ContentPart[];
         try {
           content = JSON.parse(m.content_json);
         } catch {
@@ -496,7 +496,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         }
         return {
           id: m.id,
-          role: m.role as any,
+          role: m.role as ChatMessage["role"],
           content,
           timestamp: m.timestamp,
           usage,
@@ -814,10 +814,15 @@ export const ChatView: React.FC<ChatViewProps> = ({
         model: activeModel,
         messages: budgeted,
       });
-    } catch (err: any) {
+    } catch (err) {
       setIsStreaming(false);
       setCurrentStreamId(null);
-      const errStr = typeof err === "string" ? err : err.message || "Failed to start streaming";
+      const errStr =
+        typeof err === "string"
+          ? err
+          : err instanceof Error
+            ? err.message
+            : "Failed to start streaming";
       setErrorMessage(errStr);
     }
   };

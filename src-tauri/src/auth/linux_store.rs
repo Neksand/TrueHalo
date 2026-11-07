@@ -81,10 +81,7 @@ fn delete_fallback(provider: &str) {
 /// True when the Secret Service itself is unusable (as opposed to the entry
 /// simply being absent). Only then does the file fallback kick in.
 fn store_unusable(err: &keyring::Error) -> bool {
-    !matches!(
-        err,
-        keyring::Error::NoEntry | keyring::Error::Ambiguous(_)
-    )
+    !matches!(err, keyring::Error::NoEntry | keyring::Error::Ambiguous(_))
 }
 
 /// Store (or replace) the API key for `provider`.

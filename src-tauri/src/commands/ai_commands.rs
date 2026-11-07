@@ -62,14 +62,15 @@ pub async fn start_stream(
     let stream_id = request.stream_id.clone();
 
     // Local servers need no API key.
-    let client: Box<dyn crate::ai::provider::AiProvider> = if provider_name.eq_ignore_ascii_case("local") {
-        let endpoint = local_endpoint(&state.db);
-        crate::ai::get_local_provider(endpoint, String::new())
-    } else {
-        let api_key = keychain::get_credential(&provider_name)
-            .map_err(|err| keychain_error(&provider_name, err))?;
-        get_provider(&provider_name, api_key).map_err(|e| e.to_string())?
-    };
+    let client: Box<dyn crate::ai::provider::AiProvider> =
+        if provider_name.eq_ignore_ascii_case("local") {
+            let endpoint = local_endpoint(&state.db);
+            crate::ai::get_local_provider(endpoint, String::new())
+        } else {
+            let api_key = keychain::get_credential(&provider_name)
+                .map_err(|err| keychain_error(&provider_name, err))?;
+            get_provider(&provider_name, api_key).map_err(|e| e.to_string())?
+        };
 
     let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
     let (event_tx, mut event_rx) = mpsc::channel::<StreamEventPayload>(64);

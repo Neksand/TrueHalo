@@ -136,9 +136,7 @@ pub fn set_click_through(app: AppHandle, ignore: bool) -> Result<bool, String> {
 #[command]
 pub fn set_hide_from_taskbar(app: AppHandle, hide: bool) -> Result<bool, String> {
     if let Some(window) = app.get_webview_window("main") {
-        window
-            .set_skip_taskbar(hide)
-            .map_err(|e| e.to_string())?;
+        window.set_skip_taskbar(hide).map_err(|e| e.to_string())?;
         tracing::info!("skip taskbar set to: {}", hide);
         Ok(true)
     } else {
@@ -166,8 +164,7 @@ pub fn apply_macos_stealth(app: &AppHandle) {
                 crate::macos::send(
                     ns_win,
                     "setCollectionBehavior:",
-                    (CAN_JOIN_ALL_SPACES | TRANSIENT | STATIONARY | IGNORES_CYCLE)
-                        as *mut c_void,
+                    (CAN_JOIN_ALL_SPACES | TRANSIENT | STATIONARY | IGNORES_CYCLE) as *mut c_void,
                 );
             }
             tracing::info!("macOS stealth collection behavior applied");

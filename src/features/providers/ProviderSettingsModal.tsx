@@ -209,6 +209,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   const [modelPrices, setModelPrices] = useState<Record<string, ModelPricing>>({});
   const [appVersion, setAppVersion] = useState("");
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const [updateError, setUpdateError] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileSystem, setProfileSystem] = useState("");
@@ -224,6 +225,8 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     if (isOpen) {
       checkKeyStatus(selectedProvider);
     }
+    // Runs on open/provider change only; checkKeyStatus is a render-local helper.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, selectedProvider]);
 
   const loadUsage = useCallback(async () => {
@@ -329,10 +332,15 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       const list = await tauriApi.listModels(provider);
       setModels(list);
       await tauriApi.setPreference(`catalog:${provider}`, JSON.stringify(list));
-    } catch (err: any) {
+    } catch (err) {
       setMessage({
         type: "error",
-        text: typeof err === "string" ? err : err.message || "Failed to fetch models",
+        text:
+          typeof err === "string"
+            ? err
+            : err instanceof Error
+              ? err.message
+              : "Failed to fetch models",
       });
     } finally {
       setLoadingModels(false);
@@ -349,8 +357,11 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       setHasKey(true);
       setMessage({ type: "success", text: "Key saved to the system keychain." });
       await fetchModels(selectedProvider);
-    } catch (err: any) {
-      setMessage({ type: "error", text: err.message || "Could not save the key to the keychain" });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Could not save the key to the keychain",
+      });
     } finally {
       setSaving(false);
     }
@@ -365,7 +376,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       setHasKey(false);
       setModels([]);
       setMessage({ type: "success", text: "Key removed from the keychain" });
-    } catch (err: any) {
+    } catch {
       setMessage({ type: "error", text: "Could not delete the key" });
     }
   };
@@ -413,12 +424,15 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     ? usage.all_time.prompt_tokens + usage.all_time.completion_tokens
     : 0;
 
-  const usageRowCost = (row: UsageRow): number | null =>
-    costForTokens(
-      row.prompt_tokens,
-      row.completion_tokens,
-      modelPrices[`${row.provider}:${row.model}`],
-    );
+  const usageRowCost = useCallback(
+    (row: UsageRow): number | null =>
+      costForTokens(
+        row.prompt_tokens,
+        row.completion_tokens,
+        modelPrices[`${row.provider}:${row.model}`],
+      ),
+    [modelPrices],
+  );
 
   // undefined = usage not loaded yet; null = at least one price is unknown.
   const usageAllTimeCost = useMemo((): number | null => {
@@ -431,7 +445,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       else total += cost;
     }
     return unknown ? null : total;
-  }, [usage, modelPrices]);
+  }, [usage, usageRowCost]);
 
   const usageMaxDailyTokens = useMemo(
     () =>
@@ -1495,7 +1509,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                           ? `Done: ${result.checked} key(s) checked, ${result.repaired} re-bound.`
                           : "No saved keys — no password will be needed."
                       );
-                    } catch (e) {
+                    } catch {
                       setKeychainNotice("Could not re-bind the keys. Please try again.");
                     }
                   }}
@@ -1892,15 +1906,19 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
             </button>
           ) : update ? (
             <span className="text-[11px] text-slate-500">Up to date</span>
+          ) : updateError ? (
+            <span className="text-[11px] text-rose-400">Couldn't check — retry</span>
           ) : (
             <button
               onClick={async () => {
                 if (!appVersion || checkingUpdate) return;
                 setCheckingUpdate(true);
+                setUpdateError(false);
                 try {
                   setUpdate(await checkForUpdate(appVersion));
                 } catch {
                   setUpdate(null);
+                  setUpdateError(true);
                 } finally {
                   setCheckingUpdate(false);
                 }

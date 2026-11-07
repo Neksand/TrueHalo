@@ -61,7 +61,9 @@ impl HotkeyConfig {
             }
         }
 
-        if self.toggle == self.region || self.toggle == self.fullscreen || self.region == self.fullscreen
+        if self.toggle == self.region
+            || self.toggle == self.fullscreen
+            || self.region == self.fullscreen
         {
             return Err("Each action needs a different shortcut".to_string());
         }
@@ -119,14 +121,11 @@ pub fn register(app: &AppHandle, config: &HotkeyConfig) -> Result<(), String> {
 
     let fullscreen_handle = app.clone();
     shortcuts
-        .on_shortcut(
-            config.fullscreen.as_str(),
-            move |_app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    let _ = fullscreen_handle.emit("hotkey:capture-fullscreen", ());
-                }
-            },
-        )
+        .on_shortcut(config.fullscreen.as_str(), move |_app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                let _ = fullscreen_handle.emit("hotkey:capture-fullscreen", ());
+            }
+        })
         .map_err(|e| format!("{} could not be registered: {e}", config.fullscreen_label()))?;
 
     Ok(())

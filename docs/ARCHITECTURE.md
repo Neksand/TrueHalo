@@ -1,6 +1,6 @@
 # TrueHalo Architecture Document
 
-TrueHalo is a fast, responsive AI companion and screen overlay for macOS and Windows. It integrates multiple LLM providers (OpenRouter, Google Gemini, OpenAI), system credential storage and on-demand screen capture. Platform-specific code is quarantined behind small modules, so the frontend and the streaming core are shared.
+TrueHalo is a fast, responsive AI companion and screen overlay for macOS, Windows and Linux. It integrates multiple LLM providers (OpenRouter, Google Gemini, OpenAI, local servers), system credential storage and on-demand screen capture. Platform-specific code is quarantined behind small modules, so the frontend and the streaming core are shared.
 
 ---
 
@@ -35,11 +35,13 @@ TrueHalo/
 │   │   │   └── openai.rs                 # OpenAI API client
 │   │   ├── auth/
 │   │   │   ├── keychain.rs               # macOS: Security.framework Keychain
-│   │   │   └── windows_store.rs          # Windows: Credential Manager (keyring)
+│   │   │   ├── windows_store.rs          # Windows: Credential Manager (keyring)
+│   │   │   └── linux_store.rs            # Linux: Secret Service + file fallback
 │   │   ├── capture/
 │   │   │   ├── mod.rs                    # capture orchestration + downscale/JPEG compression
 │   │   │   ├── macos.rs                  # macOS: /usr/sbin/screencapture
 │   │   │   ├── windows.rs                # Windows: PowerShell + WinForms capture
+│   │   │   ├── linux.rs                  # Linux: xdg-desktop-portal screenshot
 │   │   │   └── permission.rs             # macOS TCC preflight/request FFI
 │   │   └── commands/                     # Tauri typed commands
 │   │       ├── ai_commands.rs            # list_models, start_stream, cancel_stream

@@ -12,7 +12,7 @@ pkgbase = truehalo-bin
 	depends = openssl
 	provides = truehalo
 	conflicts = truehalo
-	source = https://github.com/Neksand/TrueHalo/releases/download/v0.3.1/TrueHalo_0.4.0_amd64.deb
+	source = https://github.com/Neksand/TrueHalo/releases/download/v0.4.0/TrueHalo_0.4.0_amd64.deb
 	sha256sums = 1e86e32a974c26e838c4e7629a48f0f2273465d881d8797091561abe2df57d5f
 
 pkgname = truehalo-bin

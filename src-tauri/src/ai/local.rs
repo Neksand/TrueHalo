@@ -152,9 +152,18 @@ fn convert_local_messages(messages: Vec<super::types::ChatMessage>) -> Vec<Local
 
 fn looks_like_vision_model(id: &str) -> bool {
     let lower = id.to_lowercase();
-    ["vision", "llava", "moondream", "minicpm", "qwen2-vl", "qwen-vl", "bakllava", "obsidian"]
-        .iter()
-        .any(|hint| lower.contains(hint))
+    [
+        "vision",
+        "llava",
+        "moondream",
+        "minicpm",
+        "qwen2-vl",
+        "qwen-vl",
+        "bakllava",
+        "obsidian",
+    ]
+    .iter()
+    .any(|hint| lower.contains(hint))
 }
 
 #[async_trait]

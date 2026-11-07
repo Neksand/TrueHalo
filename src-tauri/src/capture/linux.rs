@@ -26,9 +26,7 @@ async fn grab_async(options: &CaptureOptions, output: &Path) -> Result<bool> {
         .modal(true)
         .send()
         .await
-        .context(
-            "Screen capture needs xdg-desktop-portal running in your session",
-        )?
+        .context("Screen capture needs xdg-desktop-portal running in your session")?
         .response()
         .context("The screenshot request was dismissed")?;
 

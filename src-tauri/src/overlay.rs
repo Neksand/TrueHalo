@@ -104,7 +104,11 @@ pub fn show(app: &AppHandle) {
         {
             if let Some(state) = app.try_state::<AppState>() {
                 let state_guard = state.db.get_preference("exclude_screen_recording");
-                let exclude = state_guard.ok().flatten().map(|v| v == "true").unwrap_or(true);
+                let exclude = state_guard
+                    .ok()
+                    .flatten()
+                    .map(|v| v == "true")
+                    .unwrap_or(true);
                 if exclude {
                     let _ = crate::commands::window_commands::apply_capture_exclusion(app, true);
                 }

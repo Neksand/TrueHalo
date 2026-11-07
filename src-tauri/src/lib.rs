@@ -11,7 +11,10 @@ pub mod overlay;
 pub mod storage;
 
 use app_state::AppState;
-use commands::{ai_commands, auth_commands, capture_commands, storage_commands, system_commands, window_commands};
+use commands::{
+    ai_commands, auth_commands, capture_commands, storage_commands, system_commands,
+    window_commands,
+};
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicI64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 use storage::db::DatabaseManager;
@@ -588,11 +591,9 @@ fn build_tray_menu(
     app: &tauri::AppHandle,
     hotkeys: &hotkeys::HotkeyConfig,
 ) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
-    let toggle = MenuItemBuilder::with_id(
-        "toggle",
-        format!("Show / Hide  {}", hotkeys.toggle_label()),
-    )
-    .build(app)?;
+    let toggle =
+        MenuItemBuilder::with_id("toggle", format!("Show / Hide  {}", hotkeys.toggle_label()))
+            .build(app)?;
     let region = MenuItemBuilder::with_id(
         "capture_region",
         format!("Capture Region  {}", hotkeys.region_label()),
@@ -634,10 +635,7 @@ pub(crate) fn refresh_tray(
 }
 
 /// Build the tray icon with the quick actions the overlay needs.
-fn setup_tray(
-    app: &tauri::AppHandle,
-    hotkeys: &hotkeys::HotkeyConfig,
-) -> tauri::Result<()> {
+fn setup_tray(app: &tauri::AppHandle, hotkeys: &hotkeys::HotkeyConfig) -> tauri::Result<()> {
     let menu = build_tray_menu(app, hotkeys)?;
 
     let mut builder = TrayIconBuilder::with_id("truehalo-tray")

@@ -183,9 +183,12 @@ async fn run_with_timeout(command: &mut Command) -> Result<std::process::Output,
 }
 
 fn temp_path(extension: &str) -> PathBuf {
-    std::env::temp_dir().join(format!("truehalo_ocr_{}.{}", uuid::Uuid::new_v4(), extension))
+    std::env::temp_dir().join(format!(
+        "truehalo_ocr_{}.{}",
+        uuid::Uuid::new_v4(),
+        extension
+    ))
 }
-
 
 #[cfg(all(test, target_os = "macos"))]
 mod tests {

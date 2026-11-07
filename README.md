@@ -56,13 +56,15 @@ It is **not** a background recorder or an always-listening assistant:
 Typical uses: reading dense documentation, debugging code, translating an error message or a
 paragraph, or summarising a long page you are allowed to look at.
 
-## Unreleased
+## What's new in 0.4.1
+
+Current release: **0.4.1** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
 
 - **Check for updates** — Settings footer compares the running version to the latest GitHub release and links to the download when a newer build exists. Manual install, no auto-download.
+- **More reliable update check** — the request now times out instead of hanging, and a failed check says so instead of silently doing nothing.
+- **Release hygiene** — the AUR metadata points at the right release, CI now enforces formatting, lint and frontend tests, and Dependabot keeps dependencies current.
 
 ## What's new in 0.4.0
-
-Current release: **0.4.0** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
 
 - **Token budget** — a live estimate under the message box and automatic oldest-first trimming of long threads. System instructions and your newest message always survive.
 - **Clear positioning** — TrueHalo is for documents, code, and translations; hard no to cheating use.
@@ -79,8 +81,6 @@ Current release: **0.4.0** ([Releases](https://github.com/Neksand/TrueHalo/relea
 - **Click-through mode**, history controls (text-only history, ephemeral mode), deeper stealth, version in Settings.
 
 ## What's new in 0.2.3
-
-Current release: **0.2.3** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
 
 - **Per-capture Image / Text choice** — every screenshot keeps the compressed image and the recognized text; the toggle picks what gets sent.
 
@@ -188,9 +188,9 @@ credential store.
 
 | Platform | Status | Installer |
 |---|---|---|
-| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.4.0-Installer.dmg` |
-| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.4.0_x64-setup.exe` |
-| Ubuntu 22.04+ / Debian 12+ · x64 | ✅ Available | `TrueHalo_0.4.0_amd64.deb` or `TrueHalo_0.4.0_amd64.AppImage` |
+| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.4.1-Installer.dmg` |
+| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.4.1_x64-setup.exe` |
+| Ubuntu 22.04+ / Debian 12+ · x64 | ✅ Available | `TrueHalo_0.4.1_amd64.deb` or `TrueHalo_0.4.1_amd64.AppImage` |
 
 The React UI and the Rust core are shared. The macOS backend uses AppKit and the Keychain; the Windows
 backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager; the Linux backend uses
@@ -209,7 +209,7 @@ exclusion has no Linux equivalent, so that switch stays off. Arch users: a
 
 **You need:** macOS 13 Ventura or newer on an M1/M2/M3/M4 Mac.
 
-1. Download `TrueHalo-0.4.0-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo-0.4.1-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Open the DMG and drag **TrueHalo** into **Applications**.
 3. Launch it. macOS will say it cannot verify the app — this is normal, because the build is signed
    with a local certificate instead of a paid Apple Developer ID.
@@ -238,7 +238,7 @@ exclusion has no Linux equivalent, so that switch stays off. Arch users: a
 **You need:** Windows 10 version 2004 (build 19041) or newer, or Windows 11. The installer downloads
 WebView2 automatically if it is missing.
 
-1. Download `TrueHalo_0.4.0_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo_0.4.1_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Run it. If SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** — the
    installer is not signed with a commercial certificate.
 3. Launch TrueHalo from the Start menu or the tray icon. Windows has no screen-recording permission,
@@ -252,10 +252,10 @@ instead of drawing a black rectangle in recordings.
 **You need:** Ubuntu 22.04+ or Debian 12+ (or any distro with WebKitGTK 4.1 and an appindicator
 library), plus `xdg-desktop-portal` running in the session for screenshots.
 
-1. Download `TrueHalo_0.4.0_amd64.deb` or `TrueHalo_0.4.0_amd64.AppImage` from
+1. Download `TrueHalo_0.4.1_amd64.deb` or `TrueHalo_0.4.1_amd64.AppImage` from
    [Releases](https://github.com/Neksand/TrueHalo/releases).
-2. `.deb`: `sudo apt install ./TrueHalo_0.4.0_amd64.deb`, then launch **TrueHalo** from the app menu.
-   AppImage: `chmod +x TrueHalo_0.4.0_amd64.AppImage && ./TrueHalo_0.4.0_amd64.AppImage`.
+2. `.deb`: `sudo apt install ./TrueHalo_0.4.1_amd64.deb`, then launch **TrueHalo** from the app menu.
+   AppImage: `chmod +x TrueHalo_0.4.1_amd64.AppImage && ./TrueHalo_0.4.1_amd64.AppImage`.
 3. API keys live in Secret Service (GNOME Keyring / KWallet unlocks it automatically). On systems
    without a keyring daemon, keys fall back to `0600` files under
    `~/.local/share/truehalo/credentials/`.
@@ -353,9 +353,8 @@ Shipped:
 Next, in order of expected impact:
 - [ ] **Major performance optimization** — further reduce CPU and RAM use while capturing and while
       streaming.
-- [ ] Code signing for both platforms (Apple Developer ID, Authenticode)
-- [ ] Click-through mode
-- [ ] Local models via Ollama
+- [ ] Code signing for both platforms (Apple Developer ID, Authenticode), then a signed auto-updater.
+- [ ] Local OCR on Linux (Tesseract backend) to match macOS and Windows.
 
 ## Tech stack
 
