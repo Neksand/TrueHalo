@@ -17,7 +17,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Removed the unused release-notes payload from the update check.
 
 ### Fixed
-- AUR `.SRCINFO` pointed at the v0.3.1 tag for the 0.4.0 `.deb`, so `truehalo-bin` could not build.
+- AUR metadata pointed at the wrong release tag, so `truehalo-bin` could not build. It now points at 0.4.1 with the matching checksum.
 - `cargo fmt --check` now passes (formatting drift in `ai/local.rs` and `auth/linux_store.rs`).
 - README roadmap no longer lists already-shipped features as upcoming; ARCHITECTURE.md documents the Linux backend.
 

@@ -15,7 +15,7 @@
 
 ### Fixed
 
-- AUR metadata now points at the v0.4.0 release instead of v0.3.1, so `truehalo-bin` can build.
+- AUR metadata now points at the v0.4.1 release, so `truehalo-bin` builds again.
 - `cargo fmt --check` passes; the README roadmap and architecture doc match the shipped Linux support.
 
 ### Install

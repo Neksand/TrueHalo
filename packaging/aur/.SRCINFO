@@ -1,6 +1,6 @@
 pkgbase = truehalo-bin
 	pkgdesc = Native, privacy-first AI screen overlay for desktop
-	pkgver = 0.4.0
+	pkgver = 0.4.1
 	pkgrel = 1
 	url = https://github.com/Neksand/TrueHalo
 	arch = x86_64
@@ -12,7 +12,7 @@ pkgbase = truehalo-bin
 	depends = openssl
 	provides = truehalo
 	conflicts = truehalo
-	source = https://github.com/Neksand/TrueHalo/releases/download/v0.4.0/TrueHalo_0.4.0_amd64.deb
-	sha256sums = 1e86e32a974c26e838c4e7629a48f0f2273465d881d8797091561abe2df57d5f
+	source = https://github.com/Neksand/TrueHalo/releases/download/v0.4.1/TrueHalo_0.4.1_amd64.deb
+	sha256sums = 2ba1e5355ee51afd81164be046440cca6a29bf8c731a74679a09d2f575c9dda2
 
 pkgname = truehalo-bin
