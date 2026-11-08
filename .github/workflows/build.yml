@@ -195,10 +195,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release
-          cp artifacts/TrueHalo-macos-arm64/*.dmg "release/TrueHalo-${GITHUB_REF_NAME#v}-Installer.dmg"
-          cp artifacts/TrueHalo-windows-x64/*.exe release/
-          cp artifacts/TrueHalo-linux-x64/*.deb release/
-          cp artifacts/TrueHalo-linux-x64/*.AppImage release/
+          find artifacts/TrueHalo-macos-arm64 -name '*.dmg' -exec cp {} "release/TrueHalo-${GITHUB_REF_NAME#v}-Installer.dmg" \;
+          find artifacts/TrueHalo-windows-x64 -name '*.exe' -exec cp {} release/ \;
+          find artifacts/TrueHalo-linux-x64 -name '*.deb' -exec cp {} release/ \;
+          find artifacts/TrueHalo-linux-x64 -name '*.AppImage' -exec cp {} release/ \;
           ls -lh release
 
       - name: Create GitHub release
