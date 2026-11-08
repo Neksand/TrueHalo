@@ -17,6 +17,7 @@ cd "${ROOT_DIR}"
 
 IDENTITY_NAME="${SIGN_IDENTITY:-TrueHalo Local Dev}"
 BUNDLE_ID="com.truehalo.desktop"
+VERSION="$(node -p "require('./package.json').version")"
 
 PROFILE="debug"
 BUILD_FLAG="--debug"
@@ -92,9 +93,9 @@ if [ "${DO_INSTALL}" = "1" ]; then
     cp -R "${APP_PATH}" "${DMG_DIR}/"
     ln -s /Applications "${DMG_DIR}/Applications"
     hdiutil create -volname "TrueHalo" -srcfolder "${DMG_DIR}" -ov -format ULFO \
-      "TrueHalo-0.4.0-Installer.dmg" >/dev/null
+      "TrueHalo-${VERSION}-Installer.dmg" >/dev/null
     rm -rf "${DMG_DIR}"
-    ok "DMG: TrueHalo-0.4.0-Installer.dmg"
+    ok "DMG: TrueHalo-${VERSION}-Installer.dmg"
   fi
 
   if [ "${RESET_TCC}" = "1" ]; then

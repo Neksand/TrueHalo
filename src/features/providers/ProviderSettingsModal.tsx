@@ -389,6 +389,20 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
     }
   };
 
+  const handleCheckForUpdate = async () => {
+    if (!appVersion || checkingUpdate) return;
+    setCheckingUpdate(true);
+    setUpdateError(false);
+    try {
+      setUpdate(await checkForUpdate(appVersion));
+    } catch {
+      setUpdate(null);
+      setUpdateError(true);
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
   const applyHotkeys = async (patch: Partial<AppSettings>) => {
     const next = { ...settings, ...patch };
     try {
@@ -1907,23 +1921,18 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
           ) : update ? (
             <span className="text-[11px] text-slate-500">Up to date</span>
           ) : updateError ? (
-            <span className="text-[11px] text-rose-400">Couldn't check — retry</span>
+            <button
+              onClick={handleCheckForUpdate}
+              disabled={checkingUpdate}
+              className="text-[11px] text-rose-400 hover:text-rose-300 disabled:opacity-60 transition-colors"
+            >
+              {checkingUpdate ? "Checking…" : "Couldn't check — retry"}
+            </button>
           ) : (
             <button
-              onClick={async () => {
-                if (!appVersion || checkingUpdate) return;
-                setCheckingUpdate(true);
-                setUpdateError(false);
-                try {
-                  setUpdate(await checkForUpdate(appVersion));
-                } catch {
-                  setUpdate(null);
-                  setUpdateError(true);
-                } finally {
-                  setCheckingUpdate(false);
-                }
-              }}
-              className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
+              onClick={handleCheckForUpdate}
+              disabled={checkingUpdate}
+              className="text-[11px] text-slate-400 hover:text-slate-200 disabled:opacity-60 transition-colors"
             >
               {checkingUpdate ? "Checking…" : "Check for updates"}
             </button>

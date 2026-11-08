@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionRecord {
@@ -62,6 +62,15 @@ pub struct DatabaseManager {
 }
 
 impl DatabaseManager {
+    /// Recover the connection if a previous command panicked while holding
+    /// the lock; SQLite itself is still usable, and a poisoned mutex should
+    /// not brick every later history call for the rest of the session.
+    fn lock(&self) -> MutexGuard<'_, Connection> {
+        self.conn
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
     pub fn new(db_path: PathBuf) -> Result<Self> {
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).context("Failed to create app data directory")?;
@@ -87,7 +96,7 @@ impl DatabaseManager {
     }
 
     fn init_tables(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
 
         conn.execute_batch(
             "
@@ -149,7 +158,7 @@ impl DatabaseManager {
         provider: &str,
         model: &str,
     ) -> Result<SessionRecord> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         let now = chrono_now();
 
         conn.execute(
@@ -168,7 +177,7 @@ impl DatabaseManager {
     }
 
     pub fn list_sessions(&self) -> Result<Vec<SessionRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         let mut stmt = conn.prepare(
             "SELECT id, title, provider, model, created_at, updated_at FROM sessions ORDER BY updated_at DESC",
         )?;
@@ -191,7 +200,7 @@ impl DatabaseManager {
     }
 
     pub fn rename_session(&self, session_id: &str, title: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         conn.execute(
             "UPDATE sessions SET title = ?1, updated_at = ?2 WHERE id = ?3",
             params![title, chrono_now(), session_id],
@@ -201,7 +210,7 @@ impl DatabaseManager {
 
     /// Search session titles and message text.
     pub fn search_sessions(&self, query: &str) -> Result<Vec<SessionRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         let pattern = format!("%{}%", query.trim());
         let mut stmt = conn.prepare(
             "SELECT DISTINCT s.id, s.title, s.provider, s.model, s.created_at, s.updated_at
@@ -236,7 +245,7 @@ impl DatabaseManager {
         content_json: &str,
         usage_json: Option<&str>,
     ) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         let now = chrono_now();
 
         conn.execute(
@@ -253,7 +262,7 @@ impl DatabaseManager {
     }
 
     pub fn get_session_messages(&self, session_id: &str) -> Result<Vec<MessageRecord>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         let mut stmt = conn.prepare(
             "SELECT id, session_id, role, content_json, timestamp, usage_json FROM messages WHERE session_id = ?1 ORDER BY timestamp ASC",
         )?;
@@ -276,7 +285,7 @@ impl DatabaseManager {
     }
 
     pub fn delete_session(&self, session_id: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         conn.execute(
             "DELETE FROM messages WHERE session_id = ?1",
             params![session_id],
@@ -286,7 +295,7 @@ impl DatabaseManager {
     }
 
     pub fn clear_all_history(&self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         conn.execute("DELETE FROM messages", [])?;
         conn.execute("DELETE FROM sessions", [])?;
         Ok(())
@@ -295,7 +304,7 @@ impl DatabaseManager {
     /// Aggregate token usage for the dashboard. Cost is resolved in the UI,
     /// because only the provider catalogs know their prices.
     pub fn usage_summary(&self) -> Result<UsageSummary> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
 
         let totals_query = |where_clause: &str| -> Result<UsageTotals> {
             let sql = format!(
@@ -379,7 +388,7 @@ impl DatabaseManager {
     }
 
     pub fn set_preference(&self, key: &str, value: &str) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         conn.execute(
             "INSERT OR REPLACE INTO preferences (key, value) VALUES (?1, ?2)",
             params![key, value],
@@ -388,7 +397,7 @@ impl DatabaseManager {
     }
 
     pub fn get_preference(&self, key: &str) -> Result<Option<String>> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.lock();
         let mut stmt = conn.prepare("SELECT value FROM preferences WHERE key = ?1")?;
         let mut rows = stmt.query(params![key])?;
         if let Some(row) = rows.next()? {
@@ -487,5 +496,16 @@ mod tests {
         let sessions = db.list_sessions().unwrap();
         let renamed = sessions.iter().find(|s| s.id == "sess-2").unwrap();
         assert_eq!(renamed.title, "Renamed chat");
+    }
+
+    #[test]
+    fn test_recovers_from_poisoned_lock() {
+        let db = DatabaseManager::new_in_memory().unwrap();
+        let poisoned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let _guard = db.conn.lock().unwrap();
+            panic!("poison the connection lock");
+        }));
+        assert!(poisoned.is_err());
+        assert!(db.list_sessions().is_ok());
     }
 }

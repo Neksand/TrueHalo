@@ -21,10 +21,25 @@ impl GeminiProvider {
         Self {
             api_key,
             client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
+                .connect_timeout(std::time::Duration::from_secs(15))
+                // Inactivity timeout: SSE responses can legitimately run for
+                // minutes, so do not cap the total request duration.
+                .read_timeout(std::time::Duration::from_secs(120))
                 .build()
                 .unwrap_or_default(),
         }
+    }
+
+    fn headers(&self) -> Result<HeaderMap> {
+        let mut headers = HeaderMap::new();
+        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        let key: HeaderValue = self
+            .api_key
+            .trim()
+            .parse()
+            .context("Gemini API key contains invalid characters")?;
+        headers.insert("x-goog-api-key", key);
+        Ok(headers)
     }
 }
 
@@ -107,14 +122,12 @@ impl AiProvider for GeminiProvider {
     }
 
     async fn list_models(&self) -> Result<Vec<ModelInfo>> {
-        let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models?key={}",
-            self.api_key.trim()
-        );
+        let url = "https://generativelanguage.googleapis.com/v1beta/models";
 
         let resp = self
             .client
-            .get(&url)
+            .get(url)
+            .headers(self.headers()?)
             .send()
             .await
             .context("Failed to connect to Google Gemini API")?;
@@ -163,9 +176,8 @@ impl AiProvider for GeminiProvider {
     ) -> Result<()> {
         let clean_model = request.model.trim_start_matches("models/");
         let url = format!(
-            "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse&key={}",
-            clean_model,
-            self.api_key.trim()
+            "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?alt=sse",
+            clean_model
         );
 
         let payload = GeminiChatPayload {
@@ -180,13 +192,10 @@ impl AiProvider for GeminiProvider {
             },
         };
 
-        let mut headers = HeaderMap::new();
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
         let resp = self
             .client
             .post(&url)
-            .headers(headers)
+            .headers(self.headers()?)
             .json(&payload)
             .send()
             .await

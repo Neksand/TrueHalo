@@ -1,7 +1,7 @@
 {
   "name": "truehalo",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "module",
   "description": "Native, privacy-first AI screen overlay for documents, code, and translations.",
   "license": "GPL-3.0-only",

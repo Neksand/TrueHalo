@@ -26,7 +26,10 @@ impl LocalProvider {
             base_url: base_url.trim().trim_end_matches('/').to_string(),
             api_key,
             client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(300))
+                .connect_timeout(std::time::Duration::from_secs(15))
+                // Inactivity timeout: local models can take a while to load
+                // and stream, so do not cap the total request duration.
+                .read_timeout(std::time::Duration::from_secs(300))
                 .build()
                 .unwrap_or_default(),
         }

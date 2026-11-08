@@ -56,7 +56,8 @@ fn read_fallback(provider: &str) -> Result<String, KeychainError> {
 }
 
 fn write_fallback(provider: &str, secret: &str) -> Result<(), KeychainError> {
-    use std::os::unix::fs::PermissionsExt;
+    use std::io::Write;
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
     let path = fallback_path(provider).ok_or(KeychainError::Store(
         "HOME is not set; cannot store the credential".to_string(),
@@ -66,7 +67,17 @@ fn write_fallback(provider: &str, secret: &str) -> Result<(), KeychainError> {
         std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700))
             .map_err(|e| KeychainError::Store(e.to_string()))?;
     }
-    std::fs::write(&path, secret).map_err(|e| KeychainError::Store(e.to_string()))?;
+    // Create the file with 0600 from the first byte instead of writing a
+    // world-readable file and narrowing it afterwards.
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(&path)
+        .map_err(|e| KeychainError::Store(e.to_string()))?;
+    file.write_all(secret.as_bytes())
+        .map_err(|e| KeychainError::Store(e.to_string()))?;
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
         .map_err(|e| KeychainError::Store(e.to_string()))?;
     Ok(())

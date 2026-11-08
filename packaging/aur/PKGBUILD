@@ -13,5 +13,6 @@ source=("https://github.com/Neksand/TrueHalo/releases/download/v${pkgver}/TrueHa
 sha256sums=('2ba1e5355ee51afd81164be046440cca6a29bf8c731a74679a09d2f575c9dda2')
 
 package() {
-  bsdtar -xf data.tar.gz -C "$pkgdir"
+  bsdtar -xf "$srcdir/TrueHalo_${pkgver}_amd64.deb" -C "$srcdir"
+  bsdtar -xf "$srcdir"/data.tar.* -C "$pkgdir"
 }

@@ -4,6 +4,22 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] — 2026-11-08
+
+### Changed
+- Streaming providers now use an inactivity timeout (120 s for cloud providers, 300 s for local servers) instead of a hard total timeout, so long answers are not cut off mid-stream.
+- A failed update check is now a clickable retry instead of a label that could not be clicked.
+- CI cancels superseded runs on the same ref.
+
+### Fixed
+- Gemini API keys are sent in the `x-goog-api-key` header instead of the URL, so they cannot leak through request errors or logs.
+- Switching conversations during generation cancels the active stream; stale history loads can no longer overwrite a newer selection.
+- Cancelled or failed generations no longer leave empty assistant bubbles; partial answers are saved.
+- AUR `truehalo-bin` extracts `data.tar.*` from the downloaded `.deb` instead of assuming it is already unpacked.
+- SQLite history recovers from a poisoned mutex instead of failing every later call.
+- Linux fallback credential files are created with `0600` permissions from the first byte.
+- `scripts/build.sh` names DMGs with the current version instead of a hardcoded 0.4.0.
+
 ## [0.4.1] — 2026-11-07
 
 ### Added

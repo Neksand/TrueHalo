@@ -21,7 +21,10 @@ impl OpenAiProvider {
         Self {
             api_key,
             client: reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(120))
+                .connect_timeout(std::time::Duration::from_secs(15))
+                // Inactivity timeout: SSE responses can legitimately run for
+                // minutes, so do not cap the total request duration.
+                .read_timeout(std::time::Duration::from_secs(120))
                 .build()
                 .unwrap_or_default(),
         }

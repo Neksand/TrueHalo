@@ -237,6 +237,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const renameCancelledRef = useRef(false);
+  const sessionLoadRef = useRef(0);
+  const activeStreamRef = useRef<string | null>(null);
 
   const loadSessions = useCallback(async (query: string) => {
     try {
@@ -475,10 +477,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const handleSelectSession = async (session: SessionRecord) => {
+    const loadId = ++sessionLoadRef.current;
+    // A stream belongs to the conversation that started it; stop it before
+    // switching so its deltas cannot leak into another chat.
+    if (isStreaming) {
+      await handleStopGeneration();
+    }
+    if (sessionLoadRef.current !== loadId) return;
     setCurrentSessionId(session.id);
     setIsSidebarOpen(false);
     try {
       const dbMsgs = await tauriApi.getSessionMessages(session.id);
+      // A slower load for an older click must not overwrite the newer one.
+      if (sessionLoadRef.current !== loadId) return;
       const parsed: ChatMessage[] = dbMsgs.map((m) => {
         let content: ContentPart[];
         try {
@@ -660,6 +671,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
     };
 
     const streamId = crypto.randomUUID();
+    activeStreamRef.current = streamId;
     setCurrentStreamId(streamId);
 
     const assistantPlaceholderId = crypto.randomUUID();
@@ -707,6 +719,29 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     let accumulatedText = "";
 
+    // Persist whatever the model produced, including a partial answer that
+    // was cut off by a provider error. Empty output is never saved.
+    const persistAssistant = async (usage?: TokenUsage) => {
+      if (!accumulatedText) return;
+      try {
+        await tauriApi.saveMessage(
+          assistantPlaceholderId,
+          currentSessionId,
+          "assistant",
+          JSON.stringify([{ type: "text", text: accumulatedText }]),
+          usage
+            ? JSON.stringify({
+                ...usage,
+                model: activeModel,
+                provider: activeProvider,
+              })
+            : undefined,
+        );
+      } catch (e) {
+        console.warn("Could not save assistant message:", e);
+      }
+    };
+
     try {
       const unlisten = await tauriApi.listenStream(
         streamId,
@@ -725,8 +760,23 @@ export const ChatView: React.FC<ChatViewProps> = ({
           );
         },
         async (usage?: TokenUsage) => {
-          setIsStreaming(false);
-          setCurrentStreamId(null);
+          const isCurrent = activeStreamRef.current === streamId;
+          if (isCurrent) {
+            activeStreamRef.current = null;
+            setIsStreaming(false);
+            setCurrentStreamId(null);
+          }
+
+          // Cancelling before the first token produces an empty completion;
+          // drop the placeholder instead of saving an empty assistant turn.
+          if (!accumulatedText) {
+            setMessages((prev) =>
+              prev.filter((msg) => msg.id !== assistantPlaceholderId)
+            );
+            unlisten();
+            return;
+          }
+
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantPlaceholderId
@@ -736,37 +786,28 @@ export const ChatView: React.FC<ChatViewProps> = ({
           );
 
           // Save completed assistant message in SQLite
-          try {
-            await tauriApi.saveMessage(
-              assistantPlaceholderId,
-              currentSessionId,
-              "assistant",
-              JSON.stringify([{ type: "text", text: accumulatedText }]),
-              usage
-                ? JSON.stringify({
-                    ...usage,
-                    model: activeModel,
-                    provider: activeProvider,
-                  })
-                : undefined,
-            );
-          } catch (e) {
-            console.warn("Could not save assistant message:", e);
-          }
+          await persistAssistant(usage);
 
           unlisten();
         },
-        (error) => {
-          setIsStreaming(false);
-          setCurrentStreamId(null);
-          setErrorMessage(error);
+        async (error) => {
+          const isCurrent = activeStreamRef.current === streamId;
+          if (isCurrent) {
+            activeStreamRef.current = null;
+            setIsStreaming(false);
+            setCurrentStreamId(null);
+            setErrorMessage(error);
+          }
           setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantPlaceholderId
-                ? { ...msg, isStreaming: false }
-                : msg
-            )
+            accumulatedText
+              ? prev.map((msg) =>
+                  msg.id === assistantPlaceholderId
+                    ? { ...msg, isStreaming: false }
+                    : msg
+                )
+              : prev.filter((msg) => msg.id !== assistantPlaceholderId)
           );
+          await persistAssistant();
           unlisten();
         }
       );
@@ -815,6 +856,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         messages: budgeted,
       });
     } catch (err) {
+      activeStreamRef.current = null;
       setIsStreaming(false);
       setCurrentStreamId(null);
       const errStr =
@@ -828,8 +870,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const handleStopGeneration = async () => {
-    if (currentStreamId) {
+    if (!currentStreamId) return;
+    try {
       await tauriApi.cancelStream(currentStreamId);
+    } catch (e) {
+      console.warn("Could not cancel generation:", e);
+    } finally {
+      activeStreamRef.current = null;
       setIsStreaming(false);
       setCurrentStreamId(null);
     }
@@ -856,6 +903,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const handleNewChat = () => {
+    sessionLoadRef.current += 1;
     if (isStreaming) {
       handleStopGeneration();
     }
