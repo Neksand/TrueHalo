@@ -1,6 +1,6 @@
 # Maintainer: TrueHalo contributors <https://github.com/Neksand/TrueHalo>
 pkgname=truehalo-bin
-pkgver=0.4.2
+pkgver=0.4.3
 pkgrel=1
 pkgdesc="Native, privacy-first AI screen overlay for desktop"
 arch=('x86_64')
@@ -10,7 +10,7 @@ depends=('gtk3' 'webkit2gtk-4.1' 'libayatana-appindicator' 'librsvg' 'openssl')
 provides=('truehalo')
 conflicts=('truehalo')
 source=("https://github.com/Neksand/TrueHalo/releases/download/v${pkgver}/TrueHalo_${pkgver}_amd64.deb")
-sha256sums=('9d1152ea7e093d093c4c7cde70cd3c77240f14777b87ee904c0c1938bd737e61')
+sha256sums=('29de3139294c42a204c2462c68b7d48d725afffcfe889f842a5b4c51c506bbe7')
 
 package() {
   bsdtar -xf "$srcdir/TrueHalo_${pkgver}_amd64.deb" -C "$srcdir"
