@@ -160,7 +160,7 @@ pub(crate) fn toggle_overlay_window(app: &tauri::AppHandle) {
 pub fn run() {
     init_logging();
 
-    tracing::info!("Initializing TrueHalo macOS application");
+    tracing::info!("Initializing TrueHalo on {}", std::env::consts::OS);
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -412,6 +412,36 @@ fn clear_history_if_ephemeral(app: &tauri::AppHandle) {
     }
 }
 
+/// Per-platform log directory.
+///
+/// A Windows GUI process has no `HOME`, so the old `~/Library/Logs` path
+/// silently left Windows builds with no log file at all.
+#[cfg(windows)]
+fn log_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .map(|path| path.join("TrueHalo").join("logs"))
+}
+
+#[cfg(target_os = "macos")]
+fn log_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("HOME")
+        .map(std::path::PathBuf::from)
+        .map(|path| path.join("Library/Logs/TrueHalo"))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn log_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("XDG_STATE_HOME")
+        .map(std::path::PathBuf::from)
+        .map(|path| path.join("truehalo"))
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .map(std::path::PathBuf::from)
+                .map(|path| path.join(".local/state/truehalo"))
+        })
+}
+
 /// Initialise tracing to both stderr and a rotating log file.
 ///
 /// Launching the `.app` through Finder discards stdout, so a file log is the only
@@ -439,15 +469,17 @@ fn init_logging() {
         }
     }
 
-    let log_file = std::env::var("HOME").ok().and_then(|home| {
-        let dir = std::path::PathBuf::from(home).join("Library/Logs/TrueHalo");
+    let log_file = log_dir().and_then(|dir| {
         std::fs::create_dir_all(&dir).ok()?;
         let path = dir.join("truehalo.log");
 
         // Simple rotation: keep the log from growing forever.
         if let Ok(meta) = std::fs::metadata(&path) {
             if meta.len() > 2 * 1024 * 1024 {
-                let _ = std::fs::rename(&path, dir.join("truehalo.old.log"));
+                let old = dir.join("truehalo.old.log");
+                // Windows rename does not overwrite an existing file.
+                let _ = std::fs::remove_file(&old);
+                let _ = std::fs::rename(&path, old);
             }
         }
 

@@ -30,14 +30,15 @@ impl OpenAiProvider {
         }
     }
 
-    fn headers(&self) -> HeaderMap {
+    fn headers(&self) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         let auth_val = format!("Bearer {}", self.api_key.trim());
-        if let Ok(val) = HeaderValue::from_str(&auth_val) {
-            headers.insert(AUTHORIZATION, val);
-        }
+        let auth = HeaderValue::from_str(&auth_val).context(
+            "API key contains characters that cannot be sent in an HTTP header; paste it again",
+        )?;
+        headers.insert(AUTHORIZATION, auth);
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        headers
+        Ok(headers)
     }
 }
 
@@ -143,7 +144,7 @@ impl AiProvider for OpenAiProvider {
         let resp = self
             .client
             .get("https://api.openai.com/v1/models")
-            .headers(self.headers())
+            .headers(self.headers()?)
             .send()
             .await
             .context("Failed to connect to OpenAI")?;
@@ -201,7 +202,7 @@ impl AiProvider for OpenAiProvider {
         let resp = self
             .client
             .post("https://api.openai.com/v1/chat/completions")
-            .headers(self.headers())
+            .headers(self.headers()?)
             .json(&payload)
             .send()
             .await

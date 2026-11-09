@@ -40,6 +40,13 @@ import {
   Zap,
 } from "lucide-react";
 
+/** Tauri rejects commands with plain strings, so `instanceof Error` alone hides the real cause. */
+function errorText(err: unknown, fallback: string): string {
+  if (typeof err === "string" && err.trim()) return err;
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 interface ProviderSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -316,32 +323,33 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
         }
       }
       await fetchModels(provider);
-    } catch {
+    } catch (err) {
       setHasKey(false);
       setModels([]);
+      const hint = IS_WINDOWS
+        ? ""
+        : " Open the Privacy tab → Fix, then try again.";
       setMessage({
         type: "error",
-        text: "Could not read the API key from the keychain. Open the Privacy tab → Fix, then try again.",
+        text: `${errorText(err, "Could not read the saved API key")}${hint}`,
       });
     }
   };
 
-  const fetchModels = async (provider: ProviderId) => {
+  const fetchModels = async (provider: ProviderId, errorPrefix?: string) => {
     setLoadingModels(true);
     try {
       const list = await tauriApi.listModels(provider);
       setModels(list);
       await tauriApi.setPreference(`catalog:${provider}`, JSON.stringify(list));
+      return true;
     } catch (err) {
+      const text = errorText(err, "Failed to fetch models");
       setMessage({
         type: "error",
-        text:
-          typeof err === "string"
-            ? err
-            : err instanceof Error
-              ? err.message
-              : "Failed to fetch models",
+        text: errorPrefix ? `${errorPrefix}: ${text}` : text,
       });
+      return false;
     } finally {
       setLoadingModels(false);
     }
@@ -355,12 +363,12 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
       await tauriApi.saveApiKey(selectedProvider, apiKeyInput.trim());
       setApiKeyInput("");
       setHasKey(true);
-      setMessage({ type: "success", text: "Key saved to the system keychain." });
-      await fetchModels(selectedProvider);
+      setMessage({ type: "success", text: "Key saved to the system credential store." });
+      await fetchModels(selectedProvider, "Key saved, but models could not be loaded");
     } catch (err) {
       setMessage({
         type: "error",
-        text: err instanceof Error ? err.message : "Could not save the key to the keychain",
+        text: errorText(err, "Could not save the key to the credential store"),
       });
     } finally {
       setSaving(false);
@@ -368,14 +376,14 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
   };
 
   const handleDeleteKey = async () => {
-    if (!confirm(`Delete the ${selectedProvider} key from the keychain?`)) {
+    if (!confirm(`Delete the ${selectedProvider} key from the credential store?`)) {
       return;
     }
     try {
       await tauriApi.deleteApiKey(selectedProvider);
       setHasKey(false);
       setModels([]);
-      setMessage({ type: "success", text: "Key removed from the keychain" });
+      setMessage({ type: "success", text: "Key removed from the credential store" });
     } catch {
       setMessage({ type: "error", text: "Could not delete the key" });
     }
@@ -1502,13 +1510,14 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                   <Key className="w-4 h-4 text-halo-accent shrink-0 mt-0.5" />
                   <div>
                     <span className="text-xs font-semibold text-slate-100">
-                      Password prompt when accessing keys
+                      {IS_WINDOWS
+                        ? "Credential store check"
+                        : "Password prompt when accessing keys"}
                     </span>
                     <p className="text-[11px] text-slate-400 mt-1 max-w-md leading-relaxed">
-                      If the system asks for a password when you open Settings or send
-                      a request, the keys were saved by an old (unsigned) build.
-                      Click the button once: the keys are re-bound to the current
-                      signature and the prompts stop for good.
+                      {IS_WINDOWS
+                        ? "Windows does not bind credentials to a code signature, so this is only a health check. Re-save the key in the AI Providers tab if it was written by an older build."
+                        : "If the system asks for a password when you open Settings or send a request, the keys were saved by an old (unsigned) build. Click the button once: the keys are re-bound to the current signature and the prompts stop for good."}
                     </p>
                   </div>
                 </div>
@@ -1521,7 +1530,7 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
                       setKeychainNotice(
                         result.has_any_key
                           ? `Done: ${result.checked} key(s) checked, ${result.repaired} re-bound.`
-                          : "No saved keys — no password will be needed."
+                          : "No saved keys — nothing to re-bind."
                       );
                     } catch {
                       setKeychainNotice("Could not re-bind the keys. Please try again.");
@@ -1540,9 +1549,9 @@ export const ProviderSettingsModal: React.FC<ProviderSettingsModalProps> = ({
               )}
 
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                Tip: if the system dialog still appears, choose{" "}
-                <b className="text-slate-400">“Always Allow”</b> rather than just
-                “Allow” — that way the system remembers the access.
+                {IS_WINDOWS
+                  ? "Tip: save the key from a normal desktop session, not from an elevated process or a remote shell."
+                  : "Tip: if the system dialog still appears, choose “Always Allow” rather than just “Allow” — that way the system remembers the access."}
               </p>
             </div>
 
