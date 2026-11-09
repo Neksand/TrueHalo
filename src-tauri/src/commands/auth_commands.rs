@@ -13,11 +13,38 @@ pub async fn save_api_key(provider: String, key: String) -> Result<(), String> {
         return Err("API key cannot be empty".to_string());
     }
     let key = key.trim().to_string();
-    tokio::task::spawn_blocking(move || {
-        keychain::save_credential(&provider, &key).map_err(|e| e.to_string())
+
+    // Header values cannot contain control characters. Rejecting them here
+    // gives a clear message instead of a request sent without Authorization.
+    if key.chars().any(|c| c.is_control()) {
+        return Err("API key contains control characters; paste it again".to_string());
+    }
+
+    let expected = key.clone();
+    let read_provider = provider.clone();
+
+    // Write and read back on the same thread: some platforms do not guarantee
+    // cross-thread ordering for credential store operations.
+    let stored = tokio::task::spawn_blocking(move || {
+        keychain::save_credential(&provider, &key)?;
+        keychain::get_credential(&read_provider)
     })
     .await
-    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())?;
+
+    match stored {
+        Ok(actual) if actual == expected => Ok(()),
+        Ok(_) => Err(
+            "The key was written to the credential store but read back differently. Try saving it again."
+                .to_string(),
+        ),
+        Err(err) => {
+            tracing::warn!("Saved API key could not be read back: {}", err);
+            Err(format!(
+                "The key was written but could not be read back ({err}). Try saving it again."
+            ))
+        }
+    }
 }
 
 #[command]

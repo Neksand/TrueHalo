@@ -31,19 +31,20 @@ impl OpenRouterProvider {
         }
     }
 
-    fn headers(&self) -> HeaderMap {
+    fn headers(&self) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         let auth_val = format!("Bearer {}", self.api_key.trim());
-        if let Ok(val) = HeaderValue::from_str(&auth_val) {
-            headers.insert(AUTHORIZATION, val);
-        }
+        let auth = HeaderValue::from_str(&auth_val).context(
+            "API key contains characters that cannot be sent in an HTTP header; paste it again",
+        )?;
+        headers.insert(AUTHORIZATION, auth);
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         headers.insert(
             "HTTP-Referer",
             HeaderValue::from_static("https://truehalo.app"),
         );
         headers.insert("X-Title", HeaderValue::from_static("TrueHalo"));
-        headers
+        Ok(headers)
     }
 }
 
@@ -160,7 +161,7 @@ impl AiProvider for OpenRouterProvider {
         let resp = self
             .client
             .get("https://openrouter.ai/api/v1/models")
-            .headers(self.headers())
+            .headers(self.headers()?)
             .send()
             .await
             .context("Failed to connect to OpenRouter")?;
@@ -221,7 +222,7 @@ impl AiProvider for OpenRouterProvider {
         let resp = self
             .client
             .post("https://openrouter.ai/api/v1/chat/completions")
-            .headers(self.headers())
+            .headers(self.headers()?)
             .json(&payload)
             .send()
             .await

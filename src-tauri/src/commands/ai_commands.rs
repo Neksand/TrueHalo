@@ -9,18 +9,21 @@ use tokio::sync::{mpsc, oneshot};
 
 /// Turn a keychain failure into an actionable message.
 ///
-/// `NotFound` is a configuration problem; anything else (typical: the user
-/// dismissed the macOS access dialog for a key saved by an older build) is an
-/// ACL problem that the Settings → Privacy → “Fix” action resolves.
+/// `NotFound` is a configuration problem; anything else is a storage problem
+/// (on macOS usually an ACL written by an older build, on Windows a logon
+/// session that cannot reach Credential Manager).
 fn keychain_error(provider: &str, err: KeychainError) -> String {
     match err {
         KeychainError::NotFound => {
             format!("No API key found for '{provider}'. Open Settings → AI Providers and save one.")
         }
-        _ => format!(
-            "Could not read the '{provider}' key from the keychain ({err}). \
-             Open Settings → Privacy → “Fix” once, then try again."
-        ),
+        other => {
+            #[cfg(windows)]
+            let hint = "Re-save the key in Settings → AI Providers. If it keeps failing, launch TrueHalo normally (not elevated).";
+            #[cfg(not(windows))]
+            let hint = "Open Settings → Privacy → “Fix” once, then try again.";
+            format!("Could not read the '{provider}' key ({other}). {hint}")
+        }
     }
 }
 
@@ -39,7 +42,13 @@ pub async fn list_models(
         keychain::get_credential(&provider).map_err(|err| keychain_error(&provider, err))?;
 
     let client = get_provider(&provider, api_key).map_err(|e| e.to_string())?;
-    client.list_models().await.map_err(|e| e.to_string())
+    client.list_models().await.map_err(|e| {
+        // `{:#}` keeps the whole anyhow chain (DNS, TCP, TLS, HTTP), which is
+        // what makes a Windows-only failure diagnosable from the UI.
+        let message = format!("Could not reach {provider}: {e:#}");
+        tracing::warn!("list_models failed: {}", message);
+        message
+    })
 }
 
 /// Endpoint for OpenAI-compatible local servers. Ollama's default; the user
@@ -102,12 +111,9 @@ pub async fn start_stream(
     // Spawn provider stream runner
     tokio::spawn(async move {
         if let Err(e) = client.stream(request, event_tx.clone(), cancel_rx).await {
-            tracing::error!("Stream error in provider: {}", e);
-            let _ = event_tx
-                .send(StreamEventPayload::Error {
-                    message: e.to_string(),
-                })
-                .await;
+            let message = format!("{e:#}");
+            tracing::error!("Stream error in provider: {}", message);
+            let _ = event_tx.send(StreamEventPayload::Error { message }).await;
         }
     });
 
