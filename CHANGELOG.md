@@ -4,6 +4,17 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] — 2026-11-09
+
+### Fixed
+- Windows no longer hides the real network error behind “Failed to connect”: model-list and stream failures now include the DNS, TCP, TLS or proxy cause, and the full chain is written to `%LOCALAPPDATA%\TrueHalo\logs\truehalo.log`.
+- Windows builds now trust the system certificate store in addition to bundled roots, so antivirus or corporate HTTPS inspection no longer breaks provider requests.
+- Saving a key now reads it back and reports a distinct error if the credential store did not persist it; keys containing control characters are rejected before a request can go out without `Authorization`.
+- OpenRouter and OpenAI requests no longer silently drop the `Authorization` header when the key cannot be encoded as a header value.
+
+### Changed
+- Settings shows platform-neutral credential-store copy on Windows instead of the macOS password-prompt wording.
+
 ## [0.4.2] — 2026-11-08
 
 ### Changed
@@ -168,4 +179,6 @@ First public release.
 - Cost dashboard: Usage tab (cards, per-model table, 7-day chart).
 - Model compare: split-view framework (Side A / Side B) with toggle.
 - All phases completed; open-source release v0.2.0.
+
+[0.4.3]: https://github.com/Neksand/TrueHalo/compare/v0.4.2...v0.4.3
 
