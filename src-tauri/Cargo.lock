@@ -4418,7 +4418,7 @@ dependencies = [
  "anyhow",
  "ashpd",
  "async-trait",
- "base64 0.22.1",
+ "base64 0.23.1",
  "eventsource-stream",
  "futures-util",
  "image",
