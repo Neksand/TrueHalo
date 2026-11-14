@@ -48,7 +48,7 @@ keyring = { version = "3", features = ["windows-native"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 keyring = { version = "3", features = ["sync-secret-service"] }
-ashpd = { version = "0.13", default-features = false, features = ["screenshot", "tokio"] }
+ashpd = { version = "0.14", default-features = false, features = ["screenshot", "tokio"] }
 
 [profile.release]
 opt-level = "z"
