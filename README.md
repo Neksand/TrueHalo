@@ -56,14 +56,13 @@ It is **not** a background recorder or an always-listening assistant:
 Typical uses: reading dense documentation, debugging code, translating an error message or a
 paragraph, or summarising a long page you are allowed to look at.
 
-## What's new in 0.4.3
+## What's new in 0.4.4
 
-Current release: **0.4.3** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
+Current release: **0.4.4** ([Releases](https://github.com/Neksand/TrueHalo/releases)).
 
-- **Windows errors that explain themselves** — a failed request now shows the DNS, TCP, TLS or proxy cause instead of just “Failed to connect”, and writes the full chain to `%LOCALAPPDATA%\TrueHalo\logs\truehalo.log`.
-- **HTTPS inspection works** — Windows builds trust the system certificate store, so antivirus and corporate TLS probes no longer block providers.
-- **Keys are verified on save** — the key is read back from the credential store, and a failed persist is reported instead of a false “saved”.
-- **No silent 401s** — OpenRouter/OpenAI keys with control characters are rejected before a request can go out without `Authorization`.
+- **SQLite advisory fixed** — rusqlite 0.42 / libsqlite3-sys 0.40 closes RUSTSEC-2026-0459 / CVE-2026-119375.
+- **Dependency refresh** — Tauri 2.12.7, Vite 8.3.8, react-markdown 10.1, plus current base64, ashpd and security-framework releases. No functional changes.
+- **Supply-chain audits in CI** — production `npm audit` and `cargo audit` now run on every push and pull request; both report no vulnerabilities.
 
 ## What's new in 0.4.0
 
@@ -189,9 +188,9 @@ credential store.
 
 | Platform | Status | Installer |
 |---|---|---|
-| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.4.3-Installer.dmg` |
-| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.4.3_x64-setup.exe` |
-| Ubuntu 22.04+ / Debian 12+ · x64 | ✅ Available | `TrueHalo_0.4.3_amd64.deb` or `TrueHalo_0.4.3_amd64.AppImage` |
+| macOS 13 Ventura or newer · **Apple Silicon** | ✅ Available | `TrueHalo-0.4.4-Installer.dmg` |
+| Windows 10 2004+ / Windows 11 · x64 | ✅ Available | `TrueHalo_0.4.4_x64-setup.exe` |
+| Ubuntu 22.04+ / Debian 12+ · x64 | ✅ Available | `TrueHalo_0.4.4_amd64.deb` or `TrueHalo_0.4.4_amd64.AppImage` |
 
 The React UI and the Rust core are shared. The macOS backend uses AppKit and the Keychain; the Windows
 backend uses Win32 (DWM acrylic, display affinity) and the Credential Manager; the Linux backend uses
@@ -210,7 +209,7 @@ exclusion has no Linux equivalent, so that switch stays off. Arch users: a
 
 **You need:** macOS 13 Ventura or newer on an M1/M2/M3/M4 Mac.
 
-1. Download `TrueHalo-0.4.3-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo-0.4.4-Installer.dmg` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Open the DMG and drag **TrueHalo** into **Applications**.
 3. Launch it. macOS will say it cannot verify the app — this is normal, because the build is signed
    with a local certificate instead of a paid Apple Developer ID.
@@ -239,7 +238,7 @@ exclusion has no Linux equivalent, so that switch stays off. Arch users: a
 **You need:** Windows 10 version 2004 (build 19041) or newer, or Windows 11. The installer downloads
 WebView2 automatically if it is missing.
 
-1. Download `TrueHalo_0.4.3_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
+1. Download `TrueHalo_0.4.4_x64-setup.exe` from [Releases](https://github.com/Neksand/TrueHalo/releases).
 2. Run it. If SmartScreen says *"Windows protected your PC"*, click **More info → Run anyway** — the
    installer is not signed with a commercial certificate.
 3. Launch TrueHalo from the Start menu or the tray icon. Windows has no screen-recording permission,
@@ -253,10 +252,10 @@ instead of drawing a black rectangle in recordings.
 **You need:** Ubuntu 22.04+ or Debian 12+ (or any distro with WebKitGTK 4.1 and an appindicator
 library), plus `xdg-desktop-portal` running in the session for screenshots.
 
-1. Download `TrueHalo_0.4.3_amd64.deb` or `TrueHalo_0.4.3_amd64.AppImage` from
+1. Download `TrueHalo_0.4.4_amd64.deb` or `TrueHalo_0.4.4_amd64.AppImage` from
    [Releases](https://github.com/Neksand/TrueHalo/releases).
-2. `.deb`: `sudo apt install ./TrueHalo_0.4.3_amd64.deb`, then launch **TrueHalo** from the app menu.
-   AppImage: `chmod +x TrueHalo_0.4.3_amd64.AppImage && ./TrueHalo_0.4.3_amd64.AppImage`.
+2. `.deb`: `sudo apt install ./TrueHalo_0.4.4_amd64.deb`, then launch **TrueHalo** from the app menu.
+   AppImage: `chmod +x TrueHalo_0.4.4_amd64.AppImage && ./TrueHalo_0.4.4_amd64.AppImage`.
 3. API keys live in Secret Service (GNOME Keyring / KWallet unlocks it automatically). On systems
    without a keyring daemon, keys fall back to `0600` files under
    `~/.local/share/truehalo/credentials/`.

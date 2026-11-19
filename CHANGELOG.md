@@ -4,7 +4,7 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.4] — 2026-11-19
 
 ### Changed
 - Dependency refresh: Tauri 2.12.7, Vite 8.3.8, Vitest 5.1.1, ESLint 10.15, TypeScript 5.9.3,
@@ -193,5 +193,6 @@ First public release.
 - Model compare: split-view framework (Side A / Side B) with toggle.
 - All phases completed; open-source release v0.2.0.
 
+[0.4.4]: https://github.com/Neksand/TrueHalo/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/Neksand/TrueHalo/compare/v0.4.2...v0.4.3
 
