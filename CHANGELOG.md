@@ -4,6 +4,19 @@ All notable changes to TrueHalo are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Dependency refresh: Tauri 2.12.7, Vite 8.3.8, Vitest 5.1.1, ESLint 10.15, TypeScript 5.9.3,
+  react-markdown 10.1, Lucide 1.76 and Tailwind Merge 2.6.2.
+- Rust crates: rusqlite 0.42, base64 0.23, ashpd 0.14, security-framework 3.7 and zbus 6.
+- CI now runs `npm audit` (production dependencies) and `cargo audit` on every push and pull request.
+
+### Security
+- Fixed RUSTSEC-2026-0459 / CVE-2026-119375 by moving to `libsqlite3-sys` 0.40 through rusqlite 0.42.
+- `npm audit` reports no vulnerabilities, including dev dependencies; the RustSec scan reports only
+  unmaintained/unsound transitive warnings with no fixed release.
+
 ## [0.4.3] — 2026-11-09
 
 ### Fixed

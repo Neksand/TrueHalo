@@ -29,9 +29,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "2.0"
 anyhow = "1.0"
-base64 = "0.22"
+base64 = "0.23"
 uuid = { version = "1.11", features = ["v4"] }
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.42", features = ["bundled"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 window-vibrancy = "0.8"
 open = "5"
@@ -41,14 +41,14 @@ default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
 
 [target.'cfg(target_os = "macos")'.dependencies]
-security-framework = "2.11"
+security-framework = "3"
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 keyring = { version = "3", features = ["sync-secret-service"] }
-ashpd = { version = "0.13", default-features = false, features = ["screenshot", "tokio"] }
+ashpd = { version = "0.14", default-features = false, features = ["screenshot", "tokio"] }
 
 [profile.release]
 opt-level = "z"
